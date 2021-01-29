@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package zb.sensor;  //c++:对应zb::sensor命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor";
+option java_outer_classname = "SensorProto";
+
+import "google/protobuf/empty.proto";
+
+//传感节点Id
+message NodeId {
+  uint32 value = 1;
+}
+
+//隶属于某传感节点的设备Id
+message DeviceId{
+  uint32 value = 1;
+}
+
+//节点名称
+message NodeName {
+  string value = 1;
+}
+
+//任务Id
+message TaskId {
+  uint32 value = 1;
+}
+
+//节点设备组合，是任务的最小执行单元
+message NodeDevice{
+  NodeId node_id = 1;
+  DeviceId device_id = 2;
+}
+
+//时间戳，UTC time stamp
+message Timestamp {
+  int64 seconds = 1;  //UTC时间 自1970-1-1日零点以来的秒值
+  int32 nanos = 2;    //本秒内的纳秒偏移
+}
+
+//方位信息 WGS84坐标体系
+message Position {
+  //bit indicator
+  enum TimeAlarm {
+    NONE              = 0x00;   //无告警
+    USE_UTC_TIME      = 0x01;   //使用UTC时间
+    USE_UTC_PPS       = 0x02;   //使用UTC秒脉冲
+    CLOCK_NOT_SET     = 0x04;   //时间未确定
+    TIME_QUESTIONABLE = 0x08;   //时间信息可疑
+    FROM_STATION      = 0x80;   //来自站点固定配置
+  }
+  double latitude  = 1;	        //纬度，单位 弧度
+  double longitude = 2;         //经度，单位 弧度
+  double elevation = 3;         //海拔，单位 米
+  uint32 time_sync_alarms = 4;  //GPS模块状态信息
+}
+
+//任务状态
+enum TaskStatus {
+  READY  = 0; //就绪
+  RUN    = 1; //运行
+  ABORT  = 2; //终止
+  FINISH = 3; //完成
+}
+
+//任务类型(内部使用)
+enum TaskType {
+  NODE_CONTROL = 0;     //节点控制
+  PSCAN = 1;            //全景扫描
+  DRONE_DETECT = 2;     //无人机探测
+  DISCRETE_SCAN = 3;    //离散扫描
+  ANALOG_DEMODULATE = 4;//模拟解调
+  DIFF_ANT_DIRECT = 5;  //差天线测向
+  TDOA_POSITION = 6;    //tdoa定位
+  IQ_ACQUIRE = 7;       //iq数据采集
+};
+
+//任务摘要
+message TaskSummary {
+  TaskId id = 1;        //任务id
+  TaskType type = 2;    //任务类型
+  DeviceId device = 3;  //所用设备
+  TaskStatus status = 4;//状态
+  Timestamp startTime = 5;//起始时刻
+}
+
+//感知节点信息
+message NodeInfo {
+  NodeId id = 1;          //节点id
+  string name = 2;        //节点名字
+  Timestamp last_heard_time = 3;  //最近一次通信的时刻
+  Position position = 4;          //节点位置
+  repeated DeviceId devices = 5;  //隶属于节点的设备列表
+  repeated TaskSummary tasks = 6; //节点正在运行的任务列表
+}
+
+//命令摘要
+message CmdHeader{
+  uint32 sequence_number = 1; //命令序列号
+  ErrorType error_code = 2;   //命令错误码
+  TaskId task_id = 3;         //任务id
+  NodeDevice task_runner = 4; //命令执行单元
+};
+
+//节点控制指令类型
+enum NodeControlType{
+  REBOOT = 0;         //重启
+  ABORT_ALL = 1;      //停止所有任务
+  SELF_TEST = 2;      //自检
+}
+
+//节点控制请求
+message NodeControlRequest{
+  repeated NodeId node_id = 1;  //节点id
+  NodeControlType type = 2;     //控制类型
+}
+
+//节点响应
+message NodeReply{
+  repeated CmdHeader cmd_header = 1;  //命令响应集合
+}
+
+//所有节点的信息
+message NodesInfo{
+  repeated NodeInfo node_info = 1;
+}
+
+//任务账号
+message TaskAccount{
+  TaskId task_id = 1;   //任务id
+  repeated NodeDevice node_devices = 2; //有效执行该任务的节点
+}
+
+//命令错误码
+enum ErrorType {
+  ERR_NONE = 0;
+  ERR_NOTIMPLEMENTED = -1;
+  ERR_UNKNOWN = -2;
+  ERR_BUSY = -3;
+  ERR_ABORTED = -5;
+  ERR_CMD_NOREPLY = -6;
+  ERR_PARAM = -8;
+  ERR_STATION_NAME_EXISTS = -11;
+  ERR_INVALID_HANDLE = -15;
+  ERR_INVALID_REQUEST = -16;
+  ERR_NO_SENSORS = -20;
+  ERR_SOCKET_ERROR = -26;
+  ERR_NODE_NOT_FOUND = -27;
+  ERR_NO_DATA_AVAILABLE = -28;
+  ERR_BUFFER_TOO_SMALL = -30;
+  ERR_DIAGNOSTIC = -31;
+  ERR_COMMAND_FAILED = -38;
+  ERR_TIMEOUT = -40;
+  ERR_STRING_TOO_LONG = -43;
+  ERR_DATA_TYPE = -52;
+  ERR_AUTHORIZATION = -57;
+  ERR_LICENSE = -64;
+  ERR_MEAS_FAILED = -66;
+  ERR_DATA_AVAIL_TIMEOUT = -75;
+  ERR_TASK_NOT_FOUND = -76;
+  ERR_NODE_TASK_ASSIGN = -77;
+  ERR_SENSOR_TASK_ASSIGN = -78;
+  ERR_SENSOR_TASK_START = -79;
+  ERR_OPEN_FILE = -80;
+  ERR_COMPASS_NOT_AVAILABLE = -81;
+	ERR_TDOA = -82;
+  ERR_TASK_QUIT = -83;
+}
+
+//节点管理的API
+service RFNodeService {
+  rpc ListAllNodes(google.protobuf.Empty) returns (NodesInfo) {}  //枚举所有节点
+  rpc GetNodeInfo(NodeId) returns (NodeInfo) {}                   //根据id获得节点信息
+  rpc NodeControl(NodeControlRequest) returns (NodeReply) {}      //节点控制
+}

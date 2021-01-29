@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package zb.sensor.scan.dscan; //c++:对应于zb::sensor::scan::dscan命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.scan.dscan";
+option java_outer_classname = "DiscreteScanProto";
+
+import "sensor.proto";
+import "scan.proto";    //导入scan的消息定义
+
+//离散扫描的单段参数
+message DScanSegment{
+    FrequencySpan freq_span = 1;        //频率范围
+    double        rbw = 2;              //分辨率带宽 单位 Hz
+    int32         expected_points = 3;  //希望显示的点数
+    float         threshold = 4;        //门限电平,在使能门限判别时有效
+    int32         average_count = 5;    //平均次数
+    int32         attenuation_gain = 6; //增益衰减
+    int32         antenna = 7;          //天线选择
+}
+
+//离散扫描任务参数
+message DScanParams{
+    repeated DScanSegment segments = 1; //要扫描的频段列表
+    int32         monitor_interval = 2; //回传间隔,单位ms
+    ResultOption  result_option = 3;    //结果选项
+}
+
+//启动离散扫描请求
+message StartDScanRequest{
+    repeated NodeDevice task_runner = 1;    //执行任务的节点设备
+    DScanParams dscan_params = 2;           //任务参数
+}
+
+//离散扫描任务结果
+message DScanResult {
+    NodeDevice result_from = 1;             //结果来源
+    uint32 sequence_number = 2;             //顺序号
+    Timestamp timestamp = 3;                //时间戳
+    repeated ResultBody segment_result = 4; //所有频段的扫描结果
+}
+
+//离散扫描API
+service DScanService {
+    rpc Start(StartDScanRequest) returns (TaskAccount) {}   //启动离散扫描
+    rpc GetResult(TaskId) returns (stream DScanResult) {}   //获取离散扫描结果
+    rpc Stop(TaskId) returns (NodeReply) {}                 //停止离散扫描
+}

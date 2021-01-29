@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package zb.sensor.analogDemod; //c++:对应于zb::sensor::analogDemod命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.analogDemod";
+option java_outer_classname = "AnalogDemodProto";
+
+import "sensor.proto";
+import "scan.proto";    //导入scan.proto,使用其中的消息定义
+
+//解调类型
+enum Demodulation {
+  NONE = 0;     	
+  AM   = 1;	 
+  FM   = 2; 
+  CW   = 3; //连续波
+  ISB  = 4; //独立边带
+  USB = 5;  //上边带
+}
+
+//解调信道
+message AnalogDemodChannel {
+  double        demod_frequency = 1;  //解调频率 单位Hz
+  double        demod_bandwidth = 2;  //解调带宽 单位Hz[1kHz-1MHz]
+}
+
+//解调的频谱参数
+message AnalogSpectrumParms{
+  double        center_frequency = 1; //频谱的中心频率 单位 Hz
+  double        bandwidth = 2;        //频谱的带宽, 单位 Hz ≤40MHz
+  int32         expected_points = 3;  //希望显示的点数
+  int32         average_count = 4;    //平均次数[0,128]
+  int32         monitor_interval = 5;  //回传间隔 单位ms
+}
+
+//模拟解调参数
+message AnalogDemodParms{
+  AnalogDemodChannel demod_channel = 1; //解调信道
+  Demodulation  demod_type = 2;         //解调类型
+  int32         attenuation_gain = 3;   //增益衰减[-30,20]
+  int32         antenna = 4;            //天线选择[0,1]
+  AnalogSpectrumParms spectrum_param = 5;//频谱参数,可选,如果不设置则不回传频谱结果
+}
+
+//音频结果
+message AudioResult{
+  AnalogDemodChannel current_channel = 1; //当前解调的信道
+  repeated int32 pcm_block = 2;      //音频PCM码流,high 16bits are paddings, for java compatibility
+}
+
+//解调结果
+message DemodResult {
+  NodeDevice result_from = 1;     //来自哪个节点设备
+  AudioResult audio_result = 2;   //音频结果,可能为空
+  scan.ResultBody spectrum_result = 3;//频谱结果,可能为空
+}
+
+//启动模拟解调请求
+message StartAnalogDemodRequest {
+  repeated NodeDevice task_runner = 1;  //参与任务的设备节点
+  AnalogDemodParms params = 2;          //任务参数
+}
+
+//改变解调信道的请求
+message ChangeChannelRequest {
+  TaskAccount task_account = 1;     //任务账号
+  AnalogDemodChannel channel = 2;   //要解调的信道
+}
+
+//模拟解调API
+service AnalogDemodService {
+  rpc Start(StartAnalogDemodRequest) returns (TaskAccount) {} //启动任务
+  rpc GetResult(TaskId) returns (stream DemodResult) {}       //获取任务结果
+  rpc ChangeChannel(ChangeChannelRequest) returns (NodeReply) {}  //改变解调信道
+  rpc Stop(TaskId) returns (NodeReply) {}   //停止任务
+}

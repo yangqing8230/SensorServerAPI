@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package zb.sensor.scan.pscan; //c++:对应于zb::sensor::scan::pscan命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.scan.pscan";
+option java_outer_classname = "PScanProto";
+
+import "sensor.proto";  //导入sensor.proto,以提供系统的基础消息类型
+import "scan.proto";    //导入scan.proto,以提供扫描的消息类型
+
+//全景扫描任务参数
+message PScanParams {
+  FrequencySpan freq_span = 1;          //频率范围,单位Hz
+  double        rbw = 2;                //分辨率,单位Hz
+  int32         monitor_interval = 3;   //数据回传间隔,单位ms
+  int32         expected_points = 4;    //希望显示的点数[101,16001]
+  int32         average_count = 5;      //平均次数[0,128]
+  int32         attenuation_gain = 6;   //衰减增益[-30, 20]
+  int32         antenna = 7;            //天线选择[0,1]
+  repeated ThresholdSector threshold_sectors = 8;//门限设置
+  ResultOption  result_option = 9;      //结果选项,启用的功能可选
+}
+
+//全景扫描结果头
+message PScanResultHeader {
+  uint32 sequence_number = 1; //结果顺序号
+  Timestamp timestamp = 2;    //时间戳
+}
+
+//门限
+message ThresholdSector{      
+  FrequencySpan freq_span = 1;  //门限判别的起始终止频率
+  float level = 2;              //门限电平
+}
+
+//启动全景扫描请求
+message StartPScanRequest {
+  repeated NodeDevice task_runner = 1;  //参与任务的节点设备
+  PScanParams pscan_params = 2;         //任务参数
+}
+
+//监测范围改变的请求
+message ChangeRangeRequest {
+  TaskAccount task_account = 1;     //任务账号
+  FrequencySpan span = 2;           //要监测的范围
+}
+
+//全景扫描结果
+message PScanResult {
+  NodeDevice result_from = 1;     //结果来自哪个节点设备
+  PScanResultHeader header = 2;   //结果头
+  ResultBody result_body = 3;     //结果体
+}
+
+service PScanService {
+  rpc Start(StartPScanRequest) returns (TaskAccount) {} //启动任务
+  rpc GetResult(TaskId) returns (stream PScanResult) {} //获取任务结果
+  rpc ChangeRange(ChangeRangeRequest) returns (NodeReply) {}  //改变监测范围,注意:只改变回传的数据范围,不改变实际的扫描范围
+  rpc Stop(TaskId) returns (NodeReply) {}   //停止任务
+  rpc RecordOn(TaskAccount) returns (NodeReply) {}  //启动记录,启动后节点会将任务数据保存
+  rpc RecordOff(TaskAccount) returns (NodeReply) {}   //停止记录
+}
+

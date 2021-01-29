@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package zb.sensor.scan.ifscan;  //c++:对应于zb::sensor::scan::ifscan命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.scan.ifscan";
+option java_outer_classname = "IFScanProto";
+
+import "sensor.proto";
+
+//中频扫描选项
+message Option{
+    bool enable_pulse_measurement = 1;  //使能脉冲测量
+    Timestamp sync_acquire_time = 2;    //使能多点时间同步测量
+}
+
+//中频扫描参数
+message IFScanParams {
+    double center_freq = 1;         //中心频率 单位 Hz
+    double bandwidth = 2;           //带宽 单位 Hz
+    double rbw = 3;                 //分辨率带宽 单位 Hz
+    int32 interval = 4;             //回传间隔 单位ms
+    int32 spectrum_points = 5;      //频谱显示点数
+    bool  iq_output = 6;            //是否回传IQ
+    int32 attenuation_gain = 7;     //衰减增益
+    int32 antenna = 8;              //天线选择
+    Option options = 9;             //中频扫描选项
+}
+
+//启动中频扫描请求
+message StartIFScanRequest{
+    repeated NodeDevice task_runner = 1;    //执行任务的单元
+    IFScanParams ifscan_params = 2;         //中频扫描参数
+}
+
+//信号调制类型(调制识别功能支持的类型)
+enum SignalModulateType{
+    UNKNOWN = 0;
+    AM = 1;
+    FM = 2;
+    CW = 3;
+    ISB = 4;
+    USB = 5;
+    FSK_2 = 6;
+    PSK = 7;
+    QPSK = 9;
+    QAM = 12;
+}
+
+//ITU参数
+message ITUParams{
+    SignalModulateType modulate_type = 1; //调制类型
+    double center_freq = 2;         //中心频率
+    double bandwidth = 3;           //带宽
+    double power = 4;               //功率
+}
+
+//脉冲测量参数
+message PulseParams{
+    double pulse_level = 1;         //脉冲幅度
+    double pulse_width = 2;         //脉冲宽度
+    double pulse_period = 3;        //脉冲周期
+    double occupancy = 4;           //占空比
+}
+
+//中频扫描结果
+message IFScanResult {
+    NodeDevice result_from = 1;       //结果来源
+    uint32 sequence_number = 2;       //顺序号
+    Timestamp timestamp = 3;            //时间戳
+    repeated float spectrum_trace = 4;  //频谱曲线
+    repeated float IQ_trace = 5;        //IQ曲线
+    ITUParams ituParams = 6;            //ITU参数
+    PulseParams pulseParams = 7;        //脉冲测量参数
+}
+
+//中频扫描API
+service IFScanService {
+    rpc Start(StartIFScanRequest) returns (TaskAccount) {}  //启动任务
+    rpc GetResult(TaskId) returns (stream IFScanResult) {}  //获取任务结果
+    rpc Stop(TaskId) returns (NodeReply) {}                 //停止任务
+}

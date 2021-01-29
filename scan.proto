@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package zb.sensor.scan; //c++:对应zb::sensor::scan命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.scan";
+option java_outer_classname = "ScanProto";
+
+//频率范围
+message FrequencySpan {
+  double start_freq = 1;    //起始频率
+  double stop_freq  = 2;    //终止频率
+}
+
+//信号描述符
+message SignalDescriptor {
+  double center_freq = 1;   //中心频率
+  double bandwidth = 2;     //带宽 
+  float peak = 3;           //峰值
+  float channel_power = 4;  //信号功率
+  int32 emerge_count = 5;   //出现次数
+}
+
+//结果选项
+message ResultOption{
+  bool enable_data_hold = 1;  //使能数据保持
+  bool enable_auto_detect = 2;  //使能信号检测
+  bool enable_threshold = 3;    //使能门限判别
+}
+
+//信号检测结果
+message DetectResult{
+  repeated float ref_trace = 1; //检测线
+  repeated SignalDescriptor detect_signals = 2; //检出的信号列表
+}
+
+//门限判别结果
+message ThresholdResult{
+  repeated float threshold_trace = 1; //门限线
+  repeated SignalDescriptor over_threshold_signals = 2; //超出门限的信号列表
+}
+
+//数据保持结果
+message DataHoldResult{
+  repeated float minhold_trace = 1; //最大保持线
+  repeated float maxhold_trace = 2; //最小保持线
+}
+
+message ResultBody {
+  FrequencySpan freq_span = 1;        //频率范围
+  repeated float realtime_trace = 2;  //实时频谱线
+  DataHoldResult data_hold_result = 3;  //数据保持结果
+  DetectResult detect_result = 4;       //信号检测结果
+  ThresholdResult threshold_result = 5; //门限判别结果
+}
+
+
+
+

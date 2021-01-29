@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package zb.sensor.tdoa;   //c++:对应于zb::sensor::tdoa命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.tdoa";
+option java_outer_classname = "TDOAProto";
+
+import "sensor.proto";  //依赖sensor.proto的消息定义
+
+//目标的信号特征(待定位的目标)
+message TargetSignal {
+  double center_freq = 1; //中心频率,单位 Hz
+  double bandwidth = 2;   //信号带宽,单位 Hz
+  double power = 3;       //允许节点上传数据的最低电平要求,参与任务的节点设备在采集时,只有高于该值才会将采集的数据上传到中心
+  int32 attenuation_gain = 4; //采集该信号时的增益衰减,[-30, 20],对于小信号应是开启增益
+  int32 antenna = 5;      //天线选择[0,1]
+}
+
+message TDOATraceOption{
+  bool enable_spectrum = 1;
+  bool enable_iq = 2;
+  bool enable_coorelation = 3;
+}
+
+//tdoa任务参数
+message TDOAParams {
+  repeated TargetSignal target_signals  = 1;  //要定位的目标
+  Timestamp sync_acquire_time = 2;          //同步采集起始时刻
+  uint32 interval_msec = 3;                 //采集的时间间隔,单位 ms
+  TDOATraceOption option = 4;
+}
+
+//启动tdoa任务请求
+message StartTDOARequest{
+  repeated NodeDevice task_runner = 1;  //参与任务的单元
+  TDOAParams task_parms = 2;          //任务参数
+}
+
+//水平的方位信息
+message GeogCoord {
+  double ln = 1;  //经度,单位 度
+  double lt = 2;  //纬度,单位 度
+}
+
+//tdoa错误码
+enum TDOAError {
+	TDOA_ERR_NONE = 0;
+	TDOA_ERR_INIT = 1;
+	TDOA_ERR_NOT_AVAILABLE = 2;
+	TDOA_ERR_PARAM = 3;
+	TDOA_ERR_FILE = 4;
+	TDOA_ERR_BLOCK_ID = 5;
+	TDOA_ERR_BLOCK_TYPE = 6;
+	TDOA_ERR_WAIT_BLOCK = 7;
+	TDOA_ERR_TOO_LATE = 8;
+	TDOA_ERR_TIMESTAMP = 9;
+	TDOA_ERR_CORRELATE = 10;
+	TDOA_ERR_POSITION = 11;
+	TDOA_ERR_INVALID_HANDLE = 12;
+}
+
+//结果头
+message ResultHeader {
+  TDOAError error_code = 1; //错误码
+  string error_info = 2;    //错误信息
+  uint32 position_idx = 3;  //定位次数索引     
+  uint32 signal_idx = 4;    //目标信号索引
+  Timestamp timestamp = 5;  //时间戳    
+}
+
+//互相关结果
+message Correlation{
+  NodeDevice id = 1;  //节点设备id
+  GeogCoord position = 2; //节点设备位置
+  double arrival_diff = 3; //信号到达的距离差,单位 米
+}
+
+//tdoa定位结果
+message PositionResult {
+  ResultHeader header = 1;  //结果头
+  repeated Correlation corr = 2;   //互相关结果,结果数量为有效上报数据的节点,第一个元素为做相关的参考站
+  repeated GeogCoord target_position = 3; //目标位置,解的可能个数[0,2]
+}
+
+//tdoa过程数据(各种迹线)
+message TDOATrace {
+  enum TraceType {
+    TDOA_SPECTRUM = 0;  //频谱
+    TDOA_IQ = 1;	      //iq
+    TDOA_CORRELATE = 2;	//相关线
+  }
+  TraceType type = 1;   //迹线类型
+  uint32 position_idx = 2;  //属于第几次定位
+  uint32 signal_idx = 3;    //第几个信号
+  repeated NodeDevice from = 4; //数据来源
+  repeated float trace = 5;     //迹线数据
+}
+
+//TDOA的结果,至少包含position_result或tdoa_trace
+message TDOAResult {
+  PositionResult position_result = 1; //定位结果,可能为空
+  TDOATrace tdoa_trace = 2;           //过程数据,可能为空
+}
+
+//tdoa节点数据传输状态
+message NodeStatus{
+  NodeDevice id = 1;    //节点设备id
+  uint32 position_idx = 2;  //已传输到哪次定位
+  uint32 signal_idx = 3;    //及哪个信号
+  bool qualified = 4;       //IQ数据是否符合要求(根据设置的电平,超过电平值才传输IQ)
+}
+
+//tdoa的传输状态
+message TDOAStatus{
+  repeated NodeStatus status = 1;
+}
+
+//tdoa API
+service TDOAService {
+  rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
+  rpc GetResult(TaskId) returns (stream TDOAResult) {}  //获取任务结果
+  rpc GetStatus(TaskId) returns (TDOAStatus) {}         //过去任务的数据传输状态
+  rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
+}
+
