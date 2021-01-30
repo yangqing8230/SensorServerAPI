@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package zb.sensor.droneDetect;  //c++:对应于zb::sensor::droneDetect命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.drone_detect";
+option java_outer_classname = "DroneDetectProto";
+
+import "sensor.proto";
+
+//启动无人机探测的请求
+message StartDroneDetectRequest {
+  repeated NodeDevice task_runner = 1;  //执行任务的节点设备
+  uint32 monitor_interval_sec = 2;      //回传间隔
+}
+
+//探测结果
+message DetectResult{
+  NodeDevice detect_from = 1;   //结果来源
+  double center_frequency = 2;  //探测到的信号中心频率
+  Timestamp discover_time = 3;  //发现时刻
+}
+
+//无人机探测API
+service DroneDetectService {
+  rpc Start(StartDroneDetectRequest) returns (TaskAccount) {} //启动任务
+  rpc GetResult(TaskId) returns (stream DetectResult) {}      //获取结果
+  rpc Stop(TaskId) returns (NodeReply) {}                     //停止任务
+}
