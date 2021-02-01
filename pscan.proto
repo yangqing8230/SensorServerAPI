@@ -22,12 +22,6 @@ message PScanParams {
   ResultOption  result_option = 9;      //结果选项,启用的功能可选
 }
 
-//全景扫描结果头
-message PScanResultHeader {
-  uint32 sequence_number = 1; //结果顺序号
-  Timestamp timestamp = 2;    //时间戳
-}
-
 //门限
 message ThresholdSector{      
   FrequencySpan freq_span = 1;  //门限判别的起始终止频率
@@ -49,8 +43,9 @@ message ChangeRangeRequest {
 //全景扫描结果
 message PScanResult {
   NodeDevice result_from = 1;     //结果来自哪个节点设备
-  PScanResultHeader header = 2;   //结果头
-  ResultBody result_body = 3;     //结果体
+  uint32 sequence_number = 2; //结果顺序号
+  Timestamp timestamp = 3;    //时间戳
+  ResultBody result_body = 4;     //结果体
 }
 
 service PScanService {

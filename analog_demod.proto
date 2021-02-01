@@ -46,7 +46,8 @@ message AnalogDemodParms{
 //音频结果
 message AudioResult{
   AnalogDemodChannel current_channel = 1; //当前解调的信道
-  repeated int32 pcm_block = 2;      //音频PCM码流,high 16bits are paddings, for java compatibility
+  int32 audio_sampleRate = 2;         //音频流速率
+  repeated int32 pcm_block = 3;      //音频PCM码流,high 16bits are paddings, for java compatibility
 }
 
 //解调结果

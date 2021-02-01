@@ -2,7 +2,7 @@
 
 ## 概述
 
-该文档介绍系统的编程接口，指导开发者进行二次开发，构建自己的无线电监测应用程序。系统的接口基于protobuf和gRPC技术，采用语言中立的proto文件描述接口及消息。开发者可以根据个人喜好选择开发语言和开发环境。
+该文档介绍系统的编程接口，指导开发者进行二次开发，构建自己的无线电监测应用程序。系统的接口基于`protobuf`和`gRPC`技术，采用语言中立的`proto`文件描述接口及消息。开发者可以根据个人喜好选择开发语言和开发环境。
 
 ## 典型C++/Qt环境搭建
 
@@ -21,11 +21,11 @@
 
   其他方面请参考https://grpc.io/docs/tutorials/basic/cpp
 
-建议开发者先了解熟悉protobuf和gRPC的相关技术，再进行二次开发。
+建议开发者先了解熟悉`protobuf`和`gRPC`的相关技术，再进行二次开发。
 
 ## 接口说明
 
-系统提供的接口，分布于`sensor.proto、scan.proto、pscan.proto、IF_scan.proto、discrete_scan.proto、analog_demod.proto、tdoa.proto、drone_detect`这几个文件中。其中`sensor.proto`文件描述了通用的消息类型和传感网络管理接口，`scan.proto pscan.proto IF_scan.proto discrete_scan.proto`分别描述了全景扫描，中频扫描，离散扫描的消息类型和接口，`analog_demod.proto`描述了模拟解调的消息类型和接口，`tdoa.proto`描述了TDOA定位的消息类型和接口，`drone_detect`描述了无人机探测的消息类型和接口。
+系统提供的接口，分布于`sensor.proto、scan.proto、pscan.proto、IF_scan.proto、discrete_scan.proto、analog_demod.proto、tdoa.proto、drone_detect`这几个文件中。其中`sensor.proto`文件描述了通用的消息类型和传感网络管理接口，`scan.proto pscan.proto IF_scan.proto discrete_scan.proto`分别描述了全景扫描，中频扫描，离散扫描的消息类型和接口，`analog_demod.proto`描述了模拟解调的消息类型和接口，`tdoa.proto`描述了`TDOA定位`的消息类型和接口，`drone_detect`描述了无人机探测的消息类型和接口。
 
 ### sensor.proto
 该文件对应射频传感器网络的管理功能，用于传感器节点发现、节点信息获取、节点控制等。
@@ -75,7 +75,7 @@ message NodeControlRequest{
 
 该文件定义了系统**频谱扫描类型**功能的通用消息，全景扫描、离散扫描、中频扫描都会用到这些消息。
 
-1. `FrequencySpan`消息定义了一个频率范围，该范围包含了起始频率和终止频率，单位均为Hz。
+1. `FrequencySpan`消息定义了一个频率范围，该范围包含了起始频率和终止频率，单位均为`Hz`。
 
 ```protobuf
 //频率范围
@@ -183,7 +183,36 @@ message StartPScanRequest {
   PScanParams pscan_params = 2;         //任务参数
 }
 ```
- `TaskAccount`消息定义于`sensor.proto`，每种类型的任务在创建时，系统都会给客户端返回一个`TaskAccount`，该消息包含任务ID号和真正执行该任务的节点设备列表。任务ID是任务的唯一标识，在任务启动后续的API调用时，都要带有任务ID。注意：由于网络超时或节点被占用等各种原因，在任务参数下发时，并非所有节点都会正常响应，客户端程序需要查看`TaskAccount`中的`node_devices`是否与下发任务时选中的节点设备数量一致，如果不一致，意味着有节点没有正常响应，此刻需要写入日志或向用户及时反馈，后续所有其他任务的创建与之类似，都需要对响应结果进行确认，后面不再赘述。
+请求消息的1号字段`task_runner`对应用户选择的节点设备列表，2号字段`pscan_params`是一个`PScanParams`消息，其定义为：
+
+```protobuf
+//全景扫描任务参数
+message PScanParams {
+  FrequencySpan freq_span = 1;          //频率范围,单位Hz
+  double        rbw = 2;                //分辨率,单位Hz
+  int32         monitor_interval = 3;   //数据回传间隔,单位ms
+  int32         expected_points = 4;    //希望显示的点数[101,16001]
+  int32         average_count = 5;      //平均次数[0,128]
+  int32         attenuation_gain = 6;   //衰减增益[-30, 20]
+  int32         antenna = 7;            //天线选择[0,1]
+  repeated ThresholdSector threshold_sectors = 8;//门限设置
+  ResultOption  result_option = 9;      //结果选项,启用的功能可选
+}
+```
+
+共包含9个分项
+
+- `freq_scan`是用户设置的全景扫描频率范围，起始频率需小于终止频率，最大可设范围为`[20MHz,6GHz]`，实际的扫描范围可能存在微调，会在结果中给出实际的扫描范围。
+- `rbw`分辨率带宽，最小可设为`1Hz`，一般应根据扫描范围设置合适的分辨率，分辨率过小会影响扫描速度，而过高会降低对信号的分辨能力。
+- `monitor_interval`回传间隔时间，参与任务的每个节点设备将以`monitor_interval`间隔回传结果，单位毫秒，比较合适的值可选0，100，500，1000。在无线传输时，应适当增加回传间隔。
+- `expected_points`用户希望的显示点数，可以任意设置，最佳设置范围为`[101, 16001]`，且数量为奇数，如果设置为零，则系统会传输所有的原始点，不做检波处理。同样，因为检波处理的缘故，实际结果中的显示点数可能并不与`expected_points`一致，应以实际返回的点数为准。
+- `average_count`平均次数，当平均次数不为零时，节点接收机会对多帧频谱做叠加统计，形成一帧频谱，默认统计方式是`RMS`平均。
+- `attenuation_gain`为射频通道的衰减增益控制，当处理小信号时，应为正值，以增加系统灵敏度，反之，应为负值，以免信号过载。
+- `antenna`为天线选择控制，当为0时接收机会选择`天线1`端口，当为1时选择`天线2`端口。
+- `threshold_sectors`可以设置若干个需要进行门限判别的子频段。对一些需要搜索干扰信号的频段，可以通过该分项设置，并在`result_option`中使能门限判别，结果中将会带有门限判别的结果。
+- `result_option`扫描选项，见`scan.proto`中的说明。
+
+返回值 `TaskAccount`消息定义于`sensor.proto`，每种类型的任务在创建时，系统都会给客户端返回一个`TaskAccount`，该消息包含任务ID号和真正执行该任务的节点设备列表。任务ID是任务的唯一标识，在任务启动后续的API调用时，都要带有任务ID。注意：由于网络超时或节点被占用等各种原因，在任务参数下发时，并非所有节点都会正常响应，客户端程序需要查看`TaskAccount`中的`node_devices`是否与下发任务时选中的节点设备数量一致，如果不一致，意味着有节点没有正常响应，此刻需要写入日志或向用户及时反馈，后续所有其他任务的创建与之类似，都需要对响应结果进行确认，后面不再赘述。
 
 ```protobuf
 //任务账号
@@ -203,12 +232,13 @@ message TaskAccount{
 //全景扫描结果
 message PScanResult {
   NodeDevice result_from = 1;     //结果来自哪个节点设备
-  PScanResultHeader header = 2;   //结果头
-  ResultBody result_body = 3;     //结果体
+  uint32 sequence_number = 2; //结果顺序号
+  Timestamp timestamp = 3;    //时间戳
+  ResultBody result_body = 4;     //结果体
 }
 ```
 
-`result_from`表明该消息来自哪个节点设备，描述头包括数据的时间戳，方位戳，顺序号等子消息，数据体是一个子消息，其类型是在`scan.proto`中定义的`ResultBody`，包括频率范围、频谱迹线、信号列表、门限等数据细目。
+序号1的字段`result_from`表明该消息来自哪个节点设备，序号2和3的字段为时间戳，顺序号，序号4的消息是在`scan.proto`中定义的`ResultBody`，包括频率范围、频谱迹线、信号列表、门限等数据细目。
 
 3. `rpc ChangeRange(ChangeRangeRequest) returns (NodeReply) {} `
 
@@ -261,6 +291,315 @@ message CmdHeader{
 6. `rpc RecordOff(TaskAccount) returns (NodeReply) {}`
 
    `RecordOff()`停止记录功能。该接口向服务端发送了`TaskAccount`，来说明需要停止记录的节点，服务端在收到消息后，会向相关节点发送指令，待节点响应后，向客户端返回`NodeReply`响应结果。如果有的节点之前并没有开启记录，节点则会忽略此操作，并回送响应的错误码。
+
+### IF_scan.proto
+
+`IF_scan.proto`定义了系统中频扫描功能的消息和接口，中频扫描是一种在接收机**分析带宽**范围内（例如`40MHz`）对某个频点或频段进行深入分析的扫描任务类型，以得到信号的特征参数，调制类型，ITU参数等。
+
+包含3个服务接口
+
+```protobuf
+//中频扫描API
+service IFScanService {
+    rpc Start(StartIFScanRequest) returns (TaskAccount) {}  //启动任务
+    rpc GetResult(TaskId) returns (stream IFScanResult) {}  //获取任务结果
+    rpc Stop(TaskId) returns (NodeReply) {}                 //停止任务
+}
+```
+
+1. `rpc Start(StartIFScanRequest) returns (TaskAccount) {}`
+
+   `Start()`启动一个中频分析任务，以`StartIFScanRequest`类型的消息作为请求，系统返回`TaskAccount`消息作为本任务账号。`StartIFScanRequest`的第一个消息为执行任务的节点设备，第二个消息为`IFScanParams`类型的任务参数。
+
+```protobuf
+//启动中频扫描请求
+message StartIFScanRequest{
+    repeated NodeDevice task_runner = 1;    //执行任务的单元
+    IFScanParams ifscan_params = 2;         //中频扫描参数
+}
+```
+
+```protobuf
+//中频扫描参数
+message IFScanParams {
+    double center_freq = 1;         //中心频率 单位 Hz
+    double bandwidth = 2;           //带宽 单位 Hz
+    double rbw = 3;                 //分辨率带宽 单位 Hz
+    int32 interval = 4;             //回传间隔 单位ms
+    int32 spectrum_points = 5;      //频谱显示点数
+    bool  iq_output = 6;            //是否回传IQ
+    int32 attenuation_gain = 7;     //衰减增益
+    int32 antenna = 8;              //天线选择
+    Option options = 9;             //中频扫描选项
+}
+```
+
+`IFScanParams`消息描述的中频扫描的任务参数。
+
+- `center_freq` 待分析的频段中心频率
+- `bandwidth`待分析的频段带宽，最大可设为`40e6`，即`40MHz`
+- `rbw`频谱的分辨率，同全景扫描
+- `interval`回传间隔，典型可设置为`1000`，即1秒回传一次结果
+- `spectrum_points`希望的频谱显示点数，同全景扫描
+- `iq_output`是否传送`IQ`原始数据
+- `attenuation_gain`衰减增益设置，同全景扫描
+- `antenna` 天线选择，同全景扫描
+- `options`中频扫描选项
+
+中频扫描的选项包含两项，分别为使能脉冲测量和使能时间同步测量。通过`Option`消息类型定义。
+
+```protobuf
+//中频扫描选项
+message Option{
+    bool enable_pulse_measurement = 1;  //使能脉冲测量
+    Timestamp sync_acquire_time = 2;    //使能多点时间同步测量
+}
+```
+
+- `enable_pulse_measurement`为`true`时，使能脉冲测量功能，结果中将带有脉冲测量的结果
+- `sync_acquire_time`有效时，使能时间同步测量功能，多个节点的中频分析结果将是在时间同步的前提下采集并分析处理的。
+
+2. `rpc GetResult(TaskId) returns (stream IFScanResult) {}`
+
+   `GetResult()`用于获取中频扫描结果。该接口的返回值是一个`gRPC`消息流，注意应有**独立的工作线程**来进行结果的接收。
+
+```protobuf
+//中频扫描结果
+message IFScanResult {
+    NodeDevice result_from = 1;       //结果来源
+    uint32 sequence_number = 2;       //顺序号
+    Timestamp timestamp = 3;            //时间戳
+    repeated float spectrum_trace = 4;  //频谱曲线
+    repeated float IQ_trace = 5;        //IQ曲线
+    ITUParams ituParams = 6;            //ITU参数
+    PulseParams pulseParams = 7;        //脉冲测量参数
+}
+```
+
+结果中，`result_from`，`sequence_number`，`timestamp`与全景扫描类似，不再赘述。第四项`spectrum_trace`给出中频分析的频谱曲线；第五项`IQ_trace`在中频分析选项中使能`enable_pulse_measurement`时，将给出原始IQ曲线，不使能情况下数组长度为0；第六项`ituParams`定义如下，该子消息给出信号的ITU参数。
+
+```protobuf
+//ITU参数
+message ITUParams{
+    SignalModulateType modulate_type = 1; //调制类型
+    double center_freq = 2;         //中心频率
+    double bandwidth = 3;           //带宽
+    double power = 4;               //功率
+}
+```
+
+第七项`pulseParams`定义如下，该子消息在中频分析选项中使能脉冲测量时，将给出脉冲测量的参数，不使能则不存在。
+
+```protobuf
+//脉冲测量参数
+message PulseParams{
+    double pulse_level = 1;         //脉冲幅度
+    double pulse_width = 2;         //脉冲宽度
+    double pulse_period = 3;        //脉冲周期
+    double occupancy = 4;           //占空比
+}
+```
+
+3. `rpc Stop(TaskId) returns (NodeReply) {} `
+
+   以任务id为请求，结束中频扫描任务。
+
+### discrete_scan.proto
+
+`discrete_scan.proto`定义了系统扫描功能的消息和接口，离散扫描是一种可以同时扫描多个离散频段的任务类型，可满足若干业务频段同时监测的需求。
+
+包含3个服务接口
+
+```protobuf
+//离散扫描API
+service DScanService {
+    rpc Start(StartDScanRequest) returns (TaskAccount) {}   //启动离散扫描
+    rpc GetResult(TaskId) returns (stream DScanResult) {}   //获取离散扫描结果
+    rpc Stop(TaskId) returns (NodeReply) {}                 //停止离散扫描
+}
+```
+
+1. `rpc Start(StartDScanRequest) returns (TaskAccount) {}`
+
+   `Start()`接口用于启动一个离散扫描任务，以`StartDScanRequest`类型的消息作为请求，系统返回`TaskAccount`消息作为本任务账号。`StartDScanRequest`的第一个消息为执行任务的节点设备，第二个消息为`DScanParams`类型的任务参数。
+
+```protobuf
+//启动离散扫描请求
+message StartDScanRequest{
+    repeated NodeDevice task_runner = 1;    //执行任务的节点设备
+    DScanParams dscan_params = 2;           //任务参数
+}
+```
+
+```protobuf
+//离散扫描任务参数
+message DScanParams{
+    repeated DScanSegment segments = 1; //要扫描的频段列表
+    int32         monitor_interval = 2; //回传间隔,单位ms
+    ResultOption  result_option = 3;    //结果选项
+}
+```
+
+`DScanParams`中的第一项为频段列表，其中每个元素为`DScanSegment`类型的消息；第二项为回传间隔，第三项为结果选项，可参见`scan.proto`中的定义。
+
+```protobuf
+//离散扫描的单段参数
+message DScanSegment{
+    FrequencySpan freq_span = 1;        //频率范围
+    double        rbw = 2;              //分辨率带宽 单位 Hz
+    int32         expected_points = 3;  //希望显示的点数
+    float         threshold = 4;        //门限电平,在使能门限判别时有效
+    int32         average_count = 5;    //平均次数
+    int32         attenuation_gain = 6; //增益衰减
+    int32         antenna = 7;          //天线选择
+}
+```
+
+`DScanSegment`消息描述了离散扫描其中单个频段参数。
+
+- `freq_span`频率范围，在离散扫描中，频率范围完全独立，可以和其他频段的频率范围区间相互重叠，也可乱序。
+- `rbw`分辨率带宽，同全景扫描。
+- `expected_points`显示点数，同全景扫描。
+- `threshold`本频段的门限电平，当使能了门限判别功能时有效。
+- `average_count`平均次数，同全景扫描。
+- `attenuation_gain`增益衰减，同全景扫描。
+- `antenna`天线选择，同全景扫描。
+
+应注意`DScanSegment`的所有参数只作用于一个频段，离散扫描的段与段之间是高度独立的，对于系统硬件而言，扫描每个频段都会根据`DScanSegment`的参数进行重置再启动扫描。客户端在显示时，建议采用多窗口，以对应多频段。
+
+2. `rpc GetResult(TaskId) returns (stream DScanResult) {}`
+
+   `GetResult()`接口用于获取离散扫描结果。该接口的返回值是一个`gRPC`消息流，注意应有**独立的工作线程**来进行结果的接收。
+
+```protobuf
+//离散扫描任务结果
+message DScanResult {
+    NodeDevice result_from = 1;             //结果来源
+    uint32 sequence_number = 2;             //顺序号
+    Timestamp timestamp = 3;                //时间戳
+    repeated ResultBody segment_result = 4; //所有频段的扫描结果
+}
+```
+
+其结果定义与全景扫描很类似，区别在于序号为4的字段，在这里是一个**repeated**的消息。这与离散扫描的特点是一致的，因为离散扫描任务会对分布于多个离散区间的频段进行扫描，自然就会产生多个扫描结果。
+
+3. `rpc Stop(TaskId) returns (NodeReply) {} `
+
+   以任务id为请求，结束离散扫描任务。
+
+### analog_demod.proto
+
+`analog_demod.proto`定义了模拟解调任务的消息和接口。模拟解调是一种解调AM、FM等模拟调制信号，实时输出该信号频谱和音频`PCM`码流的任务类型，系统支持分析带宽内的任意频点解调，可以通过在任务执行过程中随时切换频点，来监听不同频点的声音。
+
+包含四个接口
+
+```protobuf
+//模拟解调API
+service AnalogDemodService {
+  rpc Start(StartAnalogDemodRequest) returns (TaskAccount) {} //启动任务
+  rpc GetResult(TaskId) returns (stream DemodResult) {}       //获取任务结果
+  rpc ChangeChannel(ChangeChannelRequest) returns (NodeReply) {}  //改变解调信道
+  rpc Stop(TaskId) returns (NodeReply) {}   //停止任务
+}
+```
+
+1. `rpc Start(StartAnalogDemodRequest) returns (TaskAccount) {} `
+
+   `Start()`接口用于启动一个模拟解调任务，以`StartAnalogDemodRequest`类型的消息作为请求，系统返回`TaskAccount`消息作为本任务账号。`StartAnalogDemodRequest`的第一个消息为执行任务的节点设备，第二个消息为`AnalogDemodParms`类型的任务参数。
+
+```protobuf
+//启动模拟解调请求
+message StartAnalogDemodRequest {
+  repeated NodeDevice task_runner = 1;  //参与任务的设备节点
+  AnalogDemodParms params = 2;          //任务参数
+}
+```
+
+```protobuf
+//模拟解调参数
+message AnalogDemodParms{
+  AnalogDemodChannel demod_channel = 1; //解调信道
+  Demodulation  demod_type = 2;         //解调类型
+  int32         attenuation_gain = 3;   //增益衰减[-30,20]
+  int32         antenna = 4;            //天线选择[0,1]
+  AnalogSpectrumParms spectrum_param = 5;//频谱参数,可选,如果不设置则不回传频谱结果
+}
+```
+
+`AnalogDemodParms`消息定义了模拟解调任务参数。
+
+- `demod_channel`为一个`AnalogDemodChannel`的消息，用于设置解调频率和解调带宽
+- `demod_type`为要解调的调制类型
+- `attenuation_gain`为增益衰减设置，同全景扫描
+- `antenna`为天线选择，同全景扫描
+- `AnalogSpectrumParms`为频谱参数，可选，如果该子消息为空，则结果中只包含音频，没有频谱曲线
+
+```protobuf
+//解调的频谱参数
+message AnalogSpectrumParms{
+  double        center_frequency = 1; //频谱的中心频率 单位 Hz
+  double        bandwidth = 2;        //频谱的带宽, 单位 Hz ≤40MHz
+  int32         expected_points = 3;  //希望显示的点数
+  int32         average_count = 4;    //平均次数[0,128]
+  int32         monitor_interval = 5;  //回传间隔 单位ms
+}
+```
+
+- `center_frequency`用于设置频谱的中心频率
+
+- `bandwidth`用于设置频谱的带宽
+
+  频谱的中心频率与带宽确定了一个范围，而`demod_channel`包括解调频率和解调带宽，也是一个范围。两者之间的关系如下图所示，解调范围一定要落在频谱范围之内，解调范围像一个滑动窗口，可以在频谱范围内任意滑动，解调范围超出频谱范围的话属于非法参数。客户端启动任务时，若没有设置`AnalogSpectrumParms`，系统会自动配置一个频谱范围，这个范围以解调频率为中心，以`40MHz`为带宽。
+
+![解调](.\pic\解调.png)
+
+- `expected_points`希望显示的频谱点数，同全景扫描
+- `average_count`平均次数，同全景扫描
+- `monitor_interval`回传间隔，同全景扫描
+
+2. `rpc GetResult(TaskId) returns (stream DemodResult) {}`
+
+   `GetResult()`用于获取解调的结果，该接口的返回值是一个`gRPC`消息流，注意应有**独立的工作线程**来进行结果的接收。
+
+```protobuf
+//解调结果
+message DemodResult {
+  NodeDevice result_from = 1;     //来自哪个节点设备
+  AudioResult audio_result = 2;   //音频结果,可能为空
+  scan.ResultBody spectrum_result = 3;//频谱结果,可能为空
+}
+```
+
+结果中标号为1的字段说明数据来源；2号字段包含解调音频数据；3号字段包含频谱数据，可能为空，只有当任务参数中带有`AnalogSpectrumParms`消息时，结果中才会带有3号字段。
+
+标号2的字段是一个`AudioResult`类型的消息，其中的`current_channel`表明目前解调的信道参数，`audio_sampleRate`表明音频采样速率，`pcm_block`为音频的`pcm`码流。解调音频固定采用单声道16位的格式。
+
+```protobuf
+//音频结果
+message AudioResult{
+  AnalogDemodChannel current_channel = 1; //当前解调的信道
+  int32 audio_sampleRate = 2;         //音频流速率
+  repeated int32 pcm_block = 3;      //音频PCM码流
+}
+```
+
+标号3的字段是一个在`scan.proto`中定义的频谱结果类型，默认不启用数据保持和门限判别功能， 仅输出实时频谱曲线和信号列表。
+
+3. `rpc ChangeChannel(ChangeChannelRequest) returns (NodeReply) {}`
+
+   `ChangeChannel()`用于改变解调信道，可以在任务执行过程中调用，来改变要监听的信道。注意信道的范围不能超过频谱范围，否则设置无效。
+
+```protobuf
+//改变解调信道的请求
+message ChangeChannelRequest {
+  TaskAccount task_account = 1;     //任务账号
+  AnalogDemodChannel channel = 2;   //要解调的信道
+}
+```
+
+4. `rpc Stop(TaskId) returns (NodeReply) {} `
+
+   以任务id为请求，结束解调任务。
 
 ### TDOA.proto
 
