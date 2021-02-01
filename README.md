@@ -39,7 +39,7 @@ service RFNodeService {
 }
 ```
 
-1. `prorpc ListAllNodes(google.protobuf.Empty) returns (NodesInfo) {}`
+1. `rpc ListAllNodes(google.protobuf.Empty) returns (NodesInfo) {}`
 
    `ListAllNodes()`接口用于获取目前所有在线的传感器节点信息，`GetNodeInfo()`接口获得指定传感器的节点信息，`NodeControl`接口用于节点控制，比如操纵节点重启，停止所有运行中的任务等。接口返回一个`NodesInfo`消息，该消息包含了所有在线节点的信息，每一个节点的信息用一个`NodeInfo`表示。（注意`NodesInfo`和`NodeInfo`是两个不同的消息）。客户端可以采用轮询的方式，周期性调用该API，获取系统当前的节点信息，如果有节点新增或者掉线，应及时更新客户端的节点信息数据。`NodeInfo`是一个`protobuf`消息，定义如下：
 
@@ -155,7 +155,7 @@ message ResultBody {
 
 ### pscan.proto
 
-`pscan.proto`定义了系统**全景扫描**功能的消息和接口，全景扫描在一个频率范围内快速连续扫描，通常用于在一个较宽的频率范围内进行全范围监测，检测目前存在的信号和发现异常干扰。
+`pscan.proto`定义了系统**全景扫描**功能的消息和接口，全景扫描在一个频率范围内快速连续扫描，通常用于在一个较宽的频率范围内进行全范围监测，检测所关注频率范围内存在信号和异常干扰。
 
 包含6个服务接口：
 
@@ -224,7 +224,7 @@ message TaskAccount{
 
 2. `rpc GetResult(TaskId) returns (stream PScanResult) {} `
 
-   `GetResult()`用于获取该任务的数据。该接口的返回值是一个`gRPC`消息流，接口会持续的推送`PScanResult`消息到客户端。客户端不应在主线程调用该接口，因为在任务结束之前，该接口的调用不会返回，主线程将得不到控制权。所有流式接口都应有**独立的工作线程**来进行结果的接收。
+   `GetResult()`用于获取该任务的数据。该接口的返回值是一个`PScanResult`消息流，接口会持续的推送`PScanResult`消息到客户端。客户端不应在主线程调用该接口，因为在任务结束之前，该接口的调用不会返回，主线程将得不到控制权。所有流式接口都应有**独立的工作线程**来进行结果的接收。
 
    `PScanResult`定义如下：
 
@@ -242,9 +242,7 @@ message PScanResult {
 
 3. `rpc ChangeRange(ChangeRangeRequest) returns (NodeReply) {} `
 
-   `ChangeRange()`用于更改任务的频率范围。
-
-   `ChangeRangeRequest`消息定义如下：
+   `ChangeRange()`用于更改任务的频率范围。`ChangeRangeRequest`消息定义如下：
 
 ```protobuf
 //监测范围改变的请求
@@ -278,7 +276,7 @@ message CmdHeader{
 
 值得进一步说明的是`ChangeRange`接口的惯常调用方式。`ChangeRange`是一种对**任务过程进行干预**的API。后面的`RecordOn`和`RecordOff`接口也属于此类API，这类API在其他任务类型中也或多或少存在，这类API通常在任务的执行过程中被用户调用，用来改变任务的行为，用户可以任意设定**所有参与任务的节点集合的一个子集**去处理该请求。
 
-设置的关键在于请求消息中的`taskAccount`，用户可以根据需要，选取节点设备来填充`taskAccount`中`node_devices`子消息，下发给系统，从而这个子集去执行该请求。例如，客户端如果想让所有任务节点都响应`ChangeRange`，就可以传入任务创建时的`taskAccount`，这种情况下所有参与任务的节点都会执行该请求；如果只想让某个节点设备执行该请求，就只把该设备节点填入`node_devices`中。这样，任务就会变得很灵活，即可以观察同一个频率范围，也可以观察若干不同的频率范围，以适应不同的应用场景。
+设置的关键在于请求消息中的`taskAccount`，用户可以根据需要，选取节点设备来填充`taskAccount`中`node_devices`子消息，下发给系统，从而让这个子集去执行该请求。例如，客户端如果想让所有任务节点都响应`ChangeRange`，就可以传入任务创建时的`taskAccount`，这种情况下所有参与任务的节点都会执行该请求；如果只想让某个节点设备执行该请求，就只把该设备节点填入`node_devices`中。这样，任务就会变得很灵活，即可以观察同一个频率范围，也可以观察若干不同的频率范围，以适应不同的应用场景。
 
 4. `rpc Stop(TaskId) returns (NodeReply) {}`
 
@@ -290,7 +288,7 @@ message CmdHeader{
 
 6. `rpc RecordOff(TaskAccount) returns (NodeReply) {}`
 
-   `RecordOff()`停止记录功能。该接口向服务端发送了`TaskAccount`，来说明需要停止记录的节点，服务端在收到消息后，会向相关节点发送指令，待节点响应后，向客户端返回`NodeReply`响应结果。如果有的节点之前并没有开启记录，节点则会忽略此操作，并回送响应的错误码。
+   `RecordOff()`停止记录功能。该接口向服务端发送了`TaskAccount`，来说明需要停止记录的节点，服务端在收到消息后，会向相关节点发送指令，待节点响应后，向客户端返回`NodeReply`响应结果。如果有的节点之前并没有开启记录，节点则会忽略此操作，并回送错误码。
 
 ### IF_scan.proto
 
@@ -361,7 +359,7 @@ message Option{
 
 2. `rpc GetResult(TaskId) returns (stream IFScanResult) {}`
 
-   `GetResult()`用于获取中频扫描结果。该接口的返回值是一个`gRPC`消息流，注意应有**独立的工作线程**来进行结果的接收。
+   `GetResult()`用于获取中频扫描结果。该接口的返回值是一个`IFScanResult`消息流，注意应有**独立的工作线程**来进行结果的接收。
 
 ```protobuf
 //中频扫描结果
@@ -469,7 +467,7 @@ message DScanSegment{
 
 2. `rpc GetResult(TaskId) returns (stream DScanResult) {}`
 
-   `GetResult()`接口用于获取离散扫描结果。该接口的返回值是一个`gRPC`消息流，注意应有**独立的工作线程**来进行结果的接收。
+   `GetResult()`接口用于获取离散扫描结果。该接口的返回值是一个`DScanResult`消息流，注意应有**独立的工作线程**来进行结果的接收。
 
 ```protobuf
 //离散扫描任务结果
@@ -549,9 +547,9 @@ message AnalogSpectrumParms{
 
 - `bandwidth`用于设置频谱的带宽
 
-  频谱的中心频率与带宽确定了一个范围，而`demod_channel`包括解调频率和解调带宽，也是一个范围。两者之间的关系如下图所示，解调范围一定要落在频谱范围之内，解调范围像一个滑动窗口，可以在频谱范围内任意滑动，解调范围超出频谱范围的话属于非法参数。客户端启动任务时，若没有设置`AnalogSpectrumParms`，系统会自动配置一个频谱范围，这个范围以解调频率为中心，以`40MHz`为带宽。
+  频谱的中心频率与带宽确定了一个范围，而`demod_channel`包括解调频率和解调带宽，也是一个范围。两者之间的关系如下图所示，解调范围一定要落在频谱范围之内，解调范围像一个滑动窗口，可以在频谱范围内任意滑动，解调范围超出频谱范围的话为无效的参数。客户端启动任务时，若没有设置`AnalogSpectrumParms`，系统会自动配置一个频谱范围，这个范围以解调频率为中心，以`40MHz`为带宽。
 
-![解调](.\pic\解调.png)
+![解调范围说明](https://i.loli.net/2021/02/01/iRyINzYFojwEvHr.png)
 
 - `expected_points`希望显示的频谱点数，同全景扫描
 - `average_count`平均次数，同全景扫描
@@ -559,7 +557,7 @@ message AnalogSpectrumParms{
 
 2. `rpc GetResult(TaskId) returns (stream DemodResult) {}`
 
-   `GetResult()`用于获取解调的结果，该接口的返回值是一个`gRPC`消息流，注意应有**独立的工作线程**来进行结果的接收。
+   `GetResult()`用于获取解调的结果，该接口的返回值是一个`DemodResult`消息流，注意应有**独立的工作线程**来进行结果的接收。
 
 ```protobuf
 //解调结果
@@ -603,19 +601,18 @@ message ChangeChannelRequest {
 
 ### TDOA.proto
 
-该文件定义了系统TDOA功能的消息和接口，包含3个接口
+该文件定义了系统TDOA定位功能的消息和接口，包含四个接口
 
 ```protobuf
 service TDOAService {
-  rpc StartTDOA(StartTDOARequest) returns (TaskAccount) {}
-  rpc GetResult(TaskId) returns (stream TDOAResponse) {}
-  rpc StopTDOA(TaskId) returns (NodeReply) {}
+  rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
+  rpc GetResult(TaskId) returns (stream TDOAResult) {}  //获取任务结果
+  rpc GetStatus(TaskId) returns (TDOAStatus) {}         //获取任务的数据传输状态
+  rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
 }
 ```
 
-1. `StartTDOA()`用于发起一个TDOA任务，客户端通过该接口向服务端发送`StartTDOARequest`消息，服务端回送`TaskAccount`消息作为响应。
-
-`StartTDOARequest`消息定义为：
+1. `Start()`用于发起一个TDOA任务，客户端通过该接口向服务端发送`StartTDOARequest`消息，服务端回送`TaskAccount`消息作为响应。`StartTDOARequest`消息定义为
 
 ```protobuf
 message StartTDOARequest{
@@ -624,51 +621,110 @@ message StartTDOARequest{
 }
 ```
 
-其中的第二项`TDOAParams`消息定义为：
+其中的第一项为参与本次TDOA任务的设备节点，TDOA任务至少需要两个节点，当为2个节点时为测向，当≥3个节点时，执行多站定位。第二项`TDOAParams`消息为TDOA任务参数，定义为：
 
 ```protobuf
+//tdoa任务参数
 message TDOAParams {
-  repeated TargetSignal target_signals  = 1;	//待定位的信号列表
-  Timestamp sync_acquire_time = 2;				//起始同步采集时刻
-  uint32 interval_msec = 3;    					//采集间隔，毫秒为单位
+  repeated TargetSignal target_signals  = 1;  //要定位的目标
+  Timestamp sync_acquire_time = 2;          //同步采集起始时刻
+  uint32 interval_msec = 3;                 //采集的时间间隔,单位 ms
+  TDOAOption option = 4;
 }
 ```
 
-`TDOAParams`其中的第一项为待定位目标信号的列表，其中的每一项为描述一个信号的消息`TargetSignal`
+- `target_signals`为待定位目标信号的列表，其中的每一项为描述一个信号的消息`TargetSignal`，定位任务中应至少包含1个`TargetSignal`。`TargetSignal`中各项参数比较明确，需要进一步说明的是第三项`power`，该值用来告诉节点设备端，只有采集的信号电平值大于`power`设定的值，才允许上传数据，否则无需上传。这样可以在大量分布于各处的设备节点共同参与执行TDOA任务时，减少数据的传输量和处理量。
 
 ```protobuf
+//目标的信号特征(待定位的目标)
 message TargetSignal {
-  double center_freq = 1;	//信号中心频率
-  double bandwidth = 2;		//信号带宽
-  int32 num_iteration = 3;	//定位迭代次数
-  int32 attenuation_gain = 4; 	//增益衰减
-  int32 antenna = 5;			//天线端口
+  double center_freq = 1; //中心频率,单位 Hz
+  double bandwidth = 2;   //信号带宽,单位 Hz
+  double power = 3;       //允许节点上传数据的最低电平要求,参与任务的节点设备在采集时,只有高于该值才会将采集的数据上传到中心
+  int32 attenuation_gain = 4; //采集该信号时的增益衰减,[-30, 20],对于小信号应是开启增益
+  int32 antenna = 5;      //天线选择[0,1]
 }
 ```
 
-2. `GetResult()`用于持续的获取定位结果，请求的消息为任务id，注意该接口是一个流接口，当启动TDOA任务后，一次性调用该接口会持续收到服务端的响应，响应包含定位过程和定位结果消息，直到任务停止之后，该调用才会返回。
+- `sync_acquire_time`用于告诉节点设备端同步采集信号数据的起始时刻，采用UTC的时间标准。
+- `interval_msec`采集间隔，最短为100ms，在无线传输下，该值以[500,2000]为宜，不宜过短，以免阻塞传输。
+- `option`TDOA任务选项，可用于使能一些过程数据输出或双站测向等特殊定位方式。
 
 ```protobuf
-message TDOAResponse {
-  TDOAResult tdoa_result = 1;	//定位结果
-  TDOADetail detail = 2;		//定位过程数据
+message TDOAOption{
+  bool enable_spectrum = 1;
+  bool enable_iq = 2;
+  bool enable_coorelation = 3;
 }
 ```
 
+2. `rpc GetResult(TaskId) returns (stream TDOAResult) {} `
+
+   `GetResult()`用于获取TDOA定位的结果，该接口的返回值是一个`TDOAResult`消息流，注意应有**独立的工作线程**来进行结果的接收。结果中包含两项，第一项为定位结果，第二项为过程数据，两者均有可能为空，在客户端中应注意先使用`has_xxx()`进行判断。
+
 ```protobuf
+//TDOA的结果,至少包含position_result或tdoa_trace
 message TDOAResult {
-  ResultHeader header = 1;		//定位结果描述头       
-  repeated GeogCoord target_position = 2;	//目标位置
-  Timestamp timestamp = 3;          //获取时间
-  repeated Participator participators = 4;	//参与定位的节点    
+  PositionResult position_result = 1; //定位结果,可能为空
+  TDOATrace tdoa_trace = 2;           //过程数据,可能为空
 }
 ```
 
-定位的结果数据`TDOAResult`中最重要的一项是序号为2的`repeated GeogCoord target_position`，该项包含了目标位置（经纬度信息），注意该项为复数，可包含[0,2]个定位结果，如果定位结果有0个，说明没有解，如果定位结果有1个，说明有唯一解；如果定位有2个，说明存在模糊解。
+```protobuf
+//tdoa定位结果
+message PositionResult {
+  ResultHeader header = 1;  //结果头
+  repeated Correlation corr = 2;   //互相关结果,结果数量为有效上报数据的节点,第一个元素为做相关的参考站
+  repeated GeogCoord target_position = 3; //目标位置,解的可能个数[0,2]
+}
+```
 
-定位的过程数据`TDOADetail`可以包含定位过程中产生的频谱迹线、IQ迹线、互相关曲线等过程数据。用户可以根据需要，决定是否显示这些细节。
+定位的结果数据`PositionResult`包含一次定位的结果信息，其中
 
-3. `StopTDOA()`用于停止TDOA任务，客户端以任务id为参数调用该接口，服务端会向所有参与该TDOA任务的节点发送停止命令，待所有节点响应后，将响应结果以`NodeReply`消息形式返回给客户端。
+- `header`结果头中包含本次结果属于第几次定位和第几个目标，以及错误信息字符串和错误码等。
+- `corr`包含站点互相关运算的结果，主要包含站点位置和信号到达距离差等信息，客户端可用此信息在地图上显示节点设备的位置和双曲线。
+- `target_position`包含目标的方位信息，注意结果项是**repeated**，可能有[0,2]个解存在，应根据`header`中的错误码和错误信息，确定该定位结果是否可信。
+
+```protobuf
+//tdoa过程数据(各种迹线)
+message TDOATrace {
+  enum TraceType {
+    TDOA_SPECTRUM = 0;  //频谱
+    TDOA_IQ = 1;	      //iq
+    TDOA_CORRELATE = 2;	//相关线
+  }
+  TraceType type = 1;   //迹线类型
+  uint32 position_idx = 2;  //属于第几次定位
+  uint32 signal_idx = 3;    //第几个信号
+  repeated NodeDevice from = 4; //数据来源
+  repeated float trace = 5;     //迹线数据
+}
+```
+
+定位的过程数据`TDOATrace`包含定位过程数据，一般会在给出定位结果之前传送给客户端，所以在客户端看来，`GetResult()`返回的流，总是N个过程数据外加1个定位结果数据，循环往复，具体N为多少，取决于有效回送数据的站点个数和TDOA任务选项。
+
+3. `rpc GetStatus(TaskId) returns (TDOAStatus) {} `
+
+   `GetStatus()`用来获取当前TDOA任务的状态，可以通过这个接口查看所有任务节点上报数据的进度。
+
+```protobuf
+//tdoa节点数据传输状态
+message TDOANodeStatus{
+  NodeDevice id = 1;    //节点设备id
+  uint32 position_idx = 2;  //已传输到哪次定位
+  uint32 signal_idx = 3;    //及哪个信号
+  bool qualified = 4;       //IQ数据是否符合要求(根据设置的电平,超过电平值才传输IQ)
+}
+
+//tdoa的传输状态
+message TDOAStatus{
+  repeated TDOANodeStatus status = 1;
+}
+```
+
+4. `rpc Stop(TaskId) returns (NodeReply) {} `
+
+   以任务id为请求，结束TDOA任务。
 
 
 

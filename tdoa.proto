@@ -17,10 +17,10 @@ message TargetSignal {
   int32 antenna = 5;      //天线选择[0,1]
 }
 
-message TDOATraceOption{
-  bool enable_spectrum = 1;
-  bool enable_iq = 2;
-  bool enable_coorelation = 3;
+message TDOAOption{
+  bool enable_spectrum = 1;   //频谱输出
+  bool enable_iq = 2;         //iq输出
+  bool enable_coorelation = 3;  //互相关结果输出
 }
 
 //tdoa任务参数
@@ -28,7 +28,7 @@ message TDOAParams {
   repeated TargetSignal target_signals  = 1;  //要定位的目标
   Timestamp sync_acquire_time = 2;          //同步采集起始时刻
   uint32 interval_msec = 3;                 //采集的时间间隔,单位 ms
-  TDOATraceOption option = 4;
+  TDOAOption option = 4;
 }
 
 //启动tdoa任务请求
@@ -104,7 +104,7 @@ message TDOAResult {
 }
 
 //tdoa节点数据传输状态
-message NodeStatus{
+message TDOANodeStatus{
   NodeDevice id = 1;    //节点设备id
   uint32 position_idx = 2;  //已传输到哪次定位
   uint32 signal_idx = 3;    //及哪个信号
@@ -113,14 +113,14 @@ message NodeStatus{
 
 //tdoa的传输状态
 message TDOAStatus{
-  repeated NodeStatus status = 1;
+  repeated TDOANodeStatus status = 1;
 }
 
 //tdoa API
 service TDOAService {
   rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
   rpc GetResult(TaskId) returns (stream TDOAResult) {}  //获取任务结果
-  rpc GetStatus(TaskId) returns (TDOAStatus) {}         //过去任务的数据传输状态
+  rpc GetStatus(TaskId) returns (TDOAStatus) {}         //获取任务的数据传输状态
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
 }
 
