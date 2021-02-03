@@ -1,3 +1,6 @@
 # protoc generated cpp files
 generated_cpp/*.cc
 generated_cpp/*.h
+
+# protoc generated python files
+generated_python/*.py
