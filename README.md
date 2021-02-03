@@ -32,7 +32,7 @@ set GPRC_CPP_PLUGIN="C:\vcpkg\installed\x64-windows\tools\grpc\grpc_cpp_plugin.e
 
 ## 接口说明
 
-系统提供的接口，分布于`sensor.proto、scan.proto、pscan.proto、IF_scan.proto、discrete_scan.proto、analog_demod.proto、tdoa.proto、drone_detect`这几个文件中。其中`sensor.proto`文件描述了通用的消息类型和传感网络管理接口，`scan.proto pscan.proto IF_scan.proto discrete_scan.proto`分别描述了全景扫描，中频扫描，离散扫描的消息类型和接口，`analog_demod.proto`描述了模拟解调的消息类型和接口，`tdoa.proto`描述了`TDOA`定位的消息类型和接口，`drone_detect`描述了无人机探测的消息类型和接口。
+系统提供的接口，分布于`sensor.proto、scan.proto、pscan.proto、IF_scan.proto、discrete_scan.proto、analog_demod.proto、tdoa.proto、iq_accquire、drone_detect`这几个文件中。其中`sensor.proto`文件描述了通用的消息类型和传感网络管理接口，`scan.proto pscan.proto IF_scan.proto discrete_scan.proto`分别描述了全景扫描，中频扫描，离散扫描的消息类型和接口，`analog_demod.proto`描述了模拟解调的消息类型和接口，`tdoa.proto`描述了`TDOA`定位的消息类型和接口，`iq_accuqire`描述了IQ采集的消息和接口，`drone_detect`描述了无人机探测的消息类型和接口。
 
 ### sensor.proto
 该文件对应射频传感器网络的管理功能，用于传感器节点发现、节点信息获取、节点控制等。
