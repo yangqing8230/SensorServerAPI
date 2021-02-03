@@ -11,11 +11,18 @@
 - Win7、Win10操作系统
 - VS2015 update3 
 - Qt5.7或以上
-- vcpkg
+- vcpkg（需添加了gRPC）
 
 ### C++ API生成
 
-- 双击运行`probuf-compile.bat`，把生成的.h和.cc文件拷贝到自己的工程目录下
+- 修改`compile.bat`中的前两行，将`PROTO_INCLUDE_DIR`和`GPRC_CPP_PLUGIN`与本机`vcpkg`的相关目录一致，例如，假设`vcpkg`安装于C盘根目录，则调整`PROTO_INCLUDE_DIR`和`GPRC_CPP_PLUGIN`路径如下：
+
+```bash
+set PROTO_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include\
+set GPRC_CPP_PLUGIN="C:\vcpkg\installed\x64-windows\tools\grpc\grpc_cpp_plugin.exe"
+```
+
+- 双击运行`compile.bat`，`generated_cpp`文件夹下将会产生若干.h和.cc文件，把这些文件拷贝到自己的工程目录下
 
 - 在自己的工程中添加宏定义`_WIN32_WINNT=0x0600`
 
@@ -25,7 +32,7 @@
 
 ## 接口说明
 
-系统提供的接口，分布于`sensor.proto、scan.proto、pscan.proto、IF_scan.proto、discrete_scan.proto、analog_demod.proto、tdoa.proto、drone_detect`这几个文件中。其中`sensor.proto`文件描述了通用的消息类型和传感网络管理接口，`scan.proto pscan.proto IF_scan.proto discrete_scan.proto`分别描述了全景扫描，中频扫描，离散扫描的消息类型和接口，`analog_demod.proto`描述了模拟解调的消息类型和接口，`tdoa.proto`描述了`TDOA定位`的消息类型和接口，`drone_detect`描述了无人机探测的消息类型和接口。
+系统提供的接口，分布于`sensor.proto、scan.proto、pscan.proto、IF_scan.proto、discrete_scan.proto、analog_demod.proto、tdoa.proto、drone_detect`这几个文件中。其中`sensor.proto`文件描述了通用的消息类型和传感网络管理接口，`scan.proto pscan.proto IF_scan.proto discrete_scan.proto`分别描述了全景扫描，中频扫描，离散扫描的消息类型和接口，`analog_demod.proto`描述了模拟解调的消息类型和接口，`tdoa.proto`描述了`TDOA`定位的消息类型和接口，`drone_detect`描述了无人机探测的消息类型和接口。
 
 ### sensor.proto
 该文件对应射频传感器网络的管理功能，用于传感器节点发现、节点信息获取、节点控制等。
@@ -725,10 +732,3 @@ message TDOAStatus{
 4. `rpc Stop(TaskId) returns (NodeReply) {} `
 
    以任务id为请求，结束TDOA任务。
-
-
-
-
-
-
-

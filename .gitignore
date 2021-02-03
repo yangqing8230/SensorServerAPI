@@ -1,0 +1,3 @@
+# protoc generated cpp files
+generated_cpp/*.cc
+generated_cpp/*.h
