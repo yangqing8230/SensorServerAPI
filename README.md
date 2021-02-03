@@ -24,7 +24,7 @@ set GPRC_CPP_PLUGIN="C:\vcpkg\installed\x64-windows\tools\grpc\grpc_cpp_plugin.e
 
 - 双击运行`compile.bat`，`generated_cpp`文件夹下将会产生若干.h和.cc文件，把这些文件拷贝到自己的工程目录下
 
-- 在自己的工程中添加宏定义`_WIN32_WINNT=0x0600`
+- 在自己的工程中添加宏定义`_WIN32_WINNT=0x0600`，如果开发环境为`vs2019`还需要在链接依赖项中添加`Ws2_32.lib;Crypt32.lib`
 
   其他方面请参考https://grpc.io/docs/tutorials/basic/cpp
 
@@ -556,7 +556,7 @@ message AnalogSpectrumParms{
 
   频谱的中心频率与带宽确定了一个范围，而`demod_channel`包括解调频率和解调带宽，也是一个范围。两者之间的关系如下图所示，解调范围一定要落在频谱范围之内，解调范围像一个滑动窗口，可以在频谱范围内任意滑动，解调范围超出频谱范围的话为无效的参数。客户端启动任务时，若没有设置`AnalogSpectrumParms`，系统会自动配置一个频谱范围，这个范围以解调频率为中心，以`40MHz`为带宽。
 
-![解调范围说明](https://i.loli.net/2021/02/01/iRyINzYFojwEvHr.png)
+![解调范围说明](./pic/解调.png)
 
 - `expected_points`希望显示的频谱点数，同全景扫描
 - `average_count`平均次数，同全景扫描
@@ -732,3 +732,145 @@ message TDOAStatus{
 4. `rpc Stop(TaskId) returns (NodeReply) {} `
 
    以任务id为请求，结束TDOA任务。
+
+### iq_acquire.proto
+
+该文件定义了系统IQ数据采集任务的消息和接口。
+
+共包含5个接口
+
+```protobuf
+//IQ扫描API
+service IQService
+{
+    rpc Start(StartIQRequest) returns (TaskAccount) {}  //启动任务
+    rpc GetResult(TaskId) returns (stream IQResult) {}  //获取任务结果
+    rpc Stop(TaskId) returns (NodeReply) {}             //停止任务
+    rpc RecordOn(TaskAccount) returns (NodeReply) {}    //开启节点端的记录
+    rpc RecordOff(TaskAccount) returns (NodeReply) {}   //关闭节点端的记录
+}
+```
+
+1. `rpc Start(StartIQRequest) returns (TaskAccount) {}`
+
+   `Start()`用于启动一个IQ采集任务，请求消息类型为`StartIQRequest`，服务端回送的响应类型为任务账号。和其他任务类似，请求中包含了要执行任务的若干节点设备，以及任务参数。
+
+```protobuf
+//启动IQ扫描的请求
+message StartIQRequest{
+    repeated NodeDevice task_runner = 1;    //任务执行单元
+    IQSweepParams sweep_params = 2;         //扫描参数
+}
+```
+
+```protobuf
+//IQ扫描参数
+message IQSweepParams{
+	uint32       num_sweeps = 1;                    //扫描次数[0,max_uint32]
+	uint32		 num_blocks = 2;	                 //每个频点的扫描块个数[0,max_uint32]	
+	uint32		 num_transfer_samples = 3;          //每个扫描块的采集点数[512,1024,2048]
+    TimeTriggerParams time_trigger_params = 4;      //时间触发参数,可选项
+    repeated IQSegmentParams segment_params = 5;    //要采集的频点
+}
+```
+
+任务参数`IQSweepParams`由5部分组成。之所以称之为IQ Sweep，是因为IQ采集也可以像频谱扫描那样，自动采集多个频点。
+
+- `num_sweeps`总的IQ扫描次数，应为非负数，0代表无限次扫描
+- `num_blocks`每个频点采集的`IQ`数据块数目，应为非负数，0代表在该频点无限次采集，注意在多个频点采集时，`num_blocks`不应设为0，因为一旦为零，任务执行单元会停留在该频点无限期的采集下去。
+- `num_transfer_samples`为每个`IQ`数据块的采样点个数，可设为2的幂次方个，最大可设为2048。此参数只是约定了数据在网络上传输的长度，与IQ的无缝采集特性并不相关，IQ数据块与块之间尽管会打包成两个网络报文传输，但不会影响其时域上的连续性，无缝采集特性是靠设备内的大容量高速`RAM`缓冲区来保证的。
+- `time_trigger_params`是一个`TimeTriggerParams`类型的消息，包含时间触发的参数，是可选项。在`TimeTriggerParams`中：
+  1. `trigger_type`表示触发类型，可选相对时间和绝对时间
+  2. `trigger_time`表示触发时间，在使用相对时间触发时，`trigger_time`表达的是延迟量的概念，执行单元会以启动任务的时刻为基准，向后延迟这段时间，再开始采集。在使用绝对时间触发时，`trigger_time`表达的是绝对时刻的概念，执行单元会以`trigger_time`所设定的时刻开始采集。在实际使用中，绝对时间触发要更常用一些，因为这种方式可以让多个节点进行非常精准的时间同步采集。绝对时间触发时，`trigger_time`的秒值是一个UTC的时刻，c++可以通过调用`time(nullptr)`来获得当前系统时间对应的UTC秒值，此时就需要注意宿主计算机的系统时间要与实际时间相符，不然下发到节点设备的触发时刻会与GNSS系统的时间相差太大，导致无触发或早触发。
+  3. `sweep_interval`表示两次扫描之间的间隔时间。
+  4. `segment_interval`表示一次扫描过程中，相邻两个频点之间的间隔时间。该值有`100ms`的下限，应满足`sweep_interval> (N * segment_interval + 200)`，`N`为要扫描的频点数。
+
+```protobuf
+//时间触发参数
+message TimeTriggerParams{
+    //触发类型
+    enum TimeTriggerType{
+        NONE = 0;
+        ABS_TIME = 0x2; //绝对时间
+        REL_TIME = 0x4; //相对时间
+    }
+    TimeTriggerType trigger_type = 1;   //触发类型
+    Timestamp       trigger_time = 2;   //触发时刻
+    uint32		    sweep_interval = 3;     //扫描间隔,单位ms
+	uint32		    segment_interval = 4;   //频点间隔,单位ms
+}
+```
+
+- `segment_params`表示要采集的频点集合。集合中的每个项为一个`IQSegmentParams`类型的消息。其中标号为1、3、4的字段很好理解，和其他任务类似。
+  1. `sample_rate`表示采集该信号所使用的采样率，采样率多档可选，可设置为56e6、28e6、14e6...，应根据信号的带宽合理选择采样率。
+  2. `level_trigger_params`表示在该频点的幅度触发参数，可选项。当为空时，表示不在该频点使用幅度触发。注意幅度触发与时间触发互斥，当使能时间触发时，`IQSegmentParams`不应再带有幅度触发参数。
+
+```protobuf
+//IQ扫描的单频点参数
+message IQSegmentParams{
+    double center_freq = 1;             //中心频率,单位Hz[20MHz,6GHz]
+    double sample_rate = 2;             //采样率,单位Hz[56M, 28M, 14M, 7M, 3.5M, 1.75M, 0.875M...]
+    int32  attenuation_gain = 3;        //增益衰减[-30,20]
+    int32  antenna = 4;                 //天线选择[0,1]
+    LevelTriggerParams level_trigger_params = 5;//幅度触发参数,可选项
+}
+```
+
+```protobuf
+//幅度触发参数
+message LevelTriggerParams{
+    //触发类型
+    enum LevelTriggerType{
+        NONE = 0;
+        LEVEL = 0x8;    //幅度触发
+        RISING = 0x10;  //上升沿触发
+        FALLING = 0x18; //下降沿触发
+    }
+    LevelTriggerType    trigger_type = 1;   //触发类型
+    float               trigger_value = 2;  //触发电平dBm(或升降幅度dB)
+}
+```
+
+2. `rpc GetResult(TaskId) returns (stream IQResult) {}`
+
+   `GetResult()`用于获取IQ采集的结果，该接口的返回值是一个`IQResult`消息流，注意应有**独立的工作线程**来进行结果的接收。
+
+```protobuf
+//IQ结果
+message IQResult{
+    NodeDevice result_from = 1;     //结果来源
+    IQResultHeader header = 2;      //结果头
+    repeated float data = 3;        //IQ数据,I和Q值交叉排列,数组大小为 num_transfer_samples * 2
+}
+```
+
+- `result_from`结果来自哪个节点设备
+- `header`结果头，包含采集的IQ数据对应的中心频率、采样率等信息。其中标号为7的`scale_to_volts`用于把无量纲的IQ数据转化为以`v`为单位的电压值。用每个I和Q值都除以`Ratio`值，其中`Ratio = sqrt(200) * scale_to_volts`，转换后取I/Q复数对的模即为以`v`为单位电压值。
+
+```protobuf
+//IQ扫描结果头
+message IQResultHeader{
+    uint64		sequence_number = 1;    //顺序号
+	uint64		segment_index = 2;      //频点索引
+    uint64		sweep_index = 3;        //扫描次数索引
+    double		center_frequency = 4;   //中心频率,单位Hz
+    double		sample_rate = 5;        //采样率,单位Hz
+    double      scale_to_volts = 6;     //电压比例尺,具体请参照文档换算
+    Timestamp   time_stamp = 7;         //时间戳
+    Position    position = 8;           //采集时所处的位置
+}
+```
+
+- `data` IQ原始数据，`float`类型，I和Q交叉排列。
+
+3. `rpc Stop(TaskId) returns (NodeReply) {}`
+
+   `Stop()`以任务id为请求，结束IQ采集任务。
+
+4. `rpc RecordOn(TaskAccount) returns (NodeReply) {}`
+
+   `RecordOn()`启动节点端的IQ数据记录功能。该接口向服务端发送了`TaskAccount`，来说明需要开启记录的节点，服务端在收到消息后，会向相关节点发送指令，由节点端执行实际的数据记录（数据将记录在节点本地），待节点响应后，向客户端返回`NodeReply`响应结果。如果有节点已经开始记录或出现其他无法启动记录的情况，将体现在`NodeReply`的错误码中。
+
+5. `rpc RecordOff(TaskAccount) returns (NodeReply) {}`
+
+   `RecordOff()`停止节点端的IQ记录功能。该接口向服务端发送了`TaskAccount`，来说明需要停止记录的节点，服务端在收到消息后，会向相关节点发送指令，待节点响应后，向客户端返回`NodeReply`响应结果。如果有的节点之前并没有开启记录，节点则会忽略此操作，并回送错误码。
