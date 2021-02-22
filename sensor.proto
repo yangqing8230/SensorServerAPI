@@ -169,9 +169,16 @@ enum ErrorType {
   ERR_TASK_QUIT = -83;
 }
 
+message RenameRequest
+{
+  NodeId id = 1;
+  NodeName new_name = 2;
+}
+
 //节点管理的API
 service RFNodeService {
   rpc ListAllNodes(google.protobuf.Empty) returns (NodesInfo) {}  //枚举所有节点
   rpc GetNodeInfo(NodeId) returns (NodeInfo) {}                   //根据id获得节点信息
+  rpc RenameNode(RenameRequest) returns(NodeReply) {}             //节点重命名
   rpc NodeControl(NodeControlRequest) returns (NodeReply) {}      //节点控制
 }

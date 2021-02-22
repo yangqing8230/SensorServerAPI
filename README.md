@@ -126,13 +126,12 @@ message DetectResult{
 }
 ```
 
-5. `ThresholdResult`消息定义了门限判别的结果，结果中包含两项，一为用户设置的门限电平线，二为通过门限比对产生的超过门限的信号列表。
+5. `ThresholdResult`消息定义了门限判别的结果，结果中为通过门限比对产生的超过门限的频段列表。
 
 ```protobuf
 //门限判别结果
 message ThresholdResult{
-  repeated float threshold_trace = 1; //门限线
-  repeated SignalDescriptor over_threshold_signals = 2; //超出门限的信号列表
+  repeated FrequencySpan over_threshold_signals = 1; //超出门限的信号列表
 }
 ```
 

@@ -36,8 +36,7 @@ message DetectResult{
 
 //门限判别结果
 message ThresholdResult{
-  repeated float threshold_trace = 1; //门限线
-  repeated SignalDescriptor over_threshold_signals = 2; //超出门限的信号列表
+  repeated FrequencySpan over_threshold_signals = 1; //超出门限的信号列表
 }
 
 //数据保持结果
