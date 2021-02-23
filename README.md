@@ -949,12 +949,12 @@ message IQResultHeader{
 
 IQ数据采集任务参数`IQSweepParams`消息中各字段范围如下表：
 
-| 消息                              | 字段                 | 范围                                                        |
-| :-------------------------------- | :------------------- | :---------------------------------------------------------- |
-| IQSweepParams                     | num_sweeps           | [0，max_uint32]                                             |
-| IQSweepParams                     | num_blocks           | [0，max_uint32]                                             |
-| IQSweepParams                     | num_transfer_samples | [512，1024，2048]                                           |
-| IQSweepParams**.**IQSegmentParams | center_freq          | [20MHz，6GHz]                                               |
-| IQSweepParams**.**IQSegmentParams | sample_rate          | [56MHz，28MHz，14MHz，7MHz，3.5MHz， 1.75MHz， 0.875MHz...] |
-| IQSweepParams**.**IQSegmentParams | attenuation_gain     | [-30，20]                                                   |
-| IQSweepParams**.**IQSegmentParams | antenna              | 可选0或1                                                    |
+| 消息                              | 字段                 | 范围                                                         |
+| :-------------------------------- | :------------------- | :----------------------------------------------------------- |
+| IQSweepParams                     | num_sweeps           | [0，max_uint32]                                              |
+| IQSweepParams                     | num_blocks           | [0，max_uint32]                                              |
+| IQSweepParams                     | num_transfer_samples | 可选512，1024，2048                                          |
+| IQSweepParams**.**IQSegmentParams | center_freq          | [20MHz，6GHz]                                                |
+| IQSweepParams**.**IQSegmentParams | sample_rate          | 可选56MHz，28MHz，14MHz，7MHz，3.5MHz， 1.75MHz， 0.875MHz... |
+| IQSweepParams**.**IQSegmentParams | attenuation_gain     | [-30，20]                                                    |
+| IQSweepParams**.**IQSegmentParams | antenna              | 可选0或1                                                     |
