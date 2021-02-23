@@ -296,6 +296,21 @@ message CmdHeader{
 
    `RecordOff()`停止记录功能。该接口向服务端发送了`TaskAccount`，来说明需要停止记录的节点，服务端在收到消息后，会向相关节点发送指令，待节点响应后，向客户端返回`NodeReply`响应结果。如果有的节点之前并没有开启记录，节点则会忽略此操作，并回送错误码。
 
+**全景扫描任务参数范围说明**
+
+全景扫描任务参数`PScanParams`消息中各字段范围如下表：
+
+| 消息                          | 字段             | 范围                                      |
+| :---------------------------- | :--------------- | :---------------------------------------- |
+| PScanParams**.**FrequencySpan | start_freq       | [20MHz，6GHz]                             |
+| PScanParams**.**FrequencySpan | stop_freq        | [20MHz，6GHz]                             |
+| PScanParams                   | rbw              | [1Hz，1MHz]                               |
+| PScanParams                   | monitor_interval | 比较合适的值可选0ms，100ms，500ms，1000ms |
+| PScanParams                   | expected_points  | [101，16001]                              |
+| PScanParams                   | average_count    | [0，128]                                  |
+| PScanParams                   | attenuation_gain | [-30，20]                                 |
+| PScanParams                   | antenna          | 可选0或1                                  |
+
 ### IF_scan.proto
 
 `IF_scan.proto`定义了系统中频扫描功能的消息和接口，中频扫描是一种在接收机**分析带宽**范围内（例如`40MHz`）对某个频点或频段进行深入分析的扫描任务类型，以得到信号的特征参数，调制类型，ITU参数等。
@@ -408,6 +423,20 @@ message PulseParams{
 
    以任务id为请求，结束中频扫描任务。
 
+**中频扫描任务参数范围说明**
+
+中频扫描任务`IFScanParams`消息中各字段范围如下表：
+
+| 消息         | 字段             | 范围                 |
+| :----------- | :--------------- | :------------------- |
+| IFScanParams | center_freq      | [20MHz，6GHz]        |
+| IFScanParams | bandwidth        | [0Hz，40MHz]         |
+| IFScanParams | rbw              | [1Hz，1MHz]          |
+| IFScanParams | interval         | 典型值可设置为1000ms |
+| IFScanParams | spectrum_points  | [101，16001]         |
+| IFScanParams | attenuation_gain | [-30，20]            |
+| IFScanParams | antenna          | 可选0或1             |
+
 ### discrete_scan.proto
 
 `discrete_scan.proto`定义了系统扫描功能的消息和接口，离散扫描是一种可以同时扫描多个离散频段的任务类型，可满足若干业务频段同时监测的需求。
@@ -490,6 +519,21 @@ message DScanResult {
 3. `rpc Stop(TaskId) returns (NodeReply) {} `
 
    以任务id为请求，结束离散扫描任务。
+
+**离散扫描任务参数范围说明**
+
+离散扫描任务参数`DScanParams`消息中各字段范围如下表：
+
+| 消息                                           | 字段             | 范围                                      |
+| :--------------------------------------------- | :--------------- | :---------------------------------------- |
+| DScanParams**.**DScanSegment**.**FrequencySpan | start_freq       | [20MHz，6GHz]                             |
+| DScanParams**.**DScanSegment**.**FrequencySpan | stop_freq        | [20MHz，6GHz]                             |
+| DScanParams**.**DScanSegment                   | rbw              | [1Hz，1MHz]                               |
+| DScanParams**.**DScanSegment                   | expected_points  | [101, 16001]                              |
+| DScanParams**.**DScanSegment                   | average_count    | [0, 128]                                  |
+| DScanParams**.**DScanSegment                   | attenuation_gain | [-30，20]                                 |
+| DScanParams**.**DScanSegment                   | antenna          | 可选0或1                                  |
+| DScanParams                                    | monitor_interval | 比较合适的值可选0ms，100ms，500ms，1000ms |
 
 ### analog_demod.proto
 
@@ -604,6 +648,22 @@ message ChangeChannelRequest {
 4. `rpc Stop(TaskId) returns (NodeReply) {} `
 
    以任务id为请求，结束解调任务。
+
+**模拟解调参数范围说明**
+
+模拟解调任务参数`AnalogDemodParms`消息中各字段范围如下表：
+
+| 消息                                 | 字段             | 范围                                      |
+| :----------------------------------- | :--------------- | :---------------------------------------- |
+| AnalogDemodParms.AnalogDemodChannel  | demod_frequency  | [20MHz，6GHz]                             |
+| AnalogDemodParms.AnalogDemodChannel  | demod_bandwidth  | [1kHz，1MHz]                              |
+| AnalogDemodParms                     | attenuation_gain | [-30，20]                                 |
+| AnalogDemodParms                     | antenna          | 可选0或1                                  |
+| AnalogDemodParms.AnalogSpectrumParms | center_frequency | [20MHz，6GHz]                             |
+| AnalogDemodParms.AnalogSpectrumParms | bandwidth        | [0，40MHz]                                |
+| AnalogDemodParms.AnalogSpectrumParms | expected_points  | [101，16001]                              |
+| AnalogDemodParms.AnalogSpectrumParms | average_count    | [0，128]                                  |
+| AnalogDemodParms.AnalogSpectrumParms | monitor_interval | 比较合适的值可选0ms，100ms，500ms，1000ms |
 
 ### TDOA.proto
 
@@ -731,6 +791,17 @@ message TDOAStatus{
 4. `rpc Stop(TaskId) returns (NodeReply) {} `
 
    以任务id为请求，结束TDOA任务。
+
+**TDOA定位任务参数范围说明**
+
+TDOA定位任务参数`TDOAParams`消息中各字段范围如下表：
+
+| 消息                        | 字段             | 范围          |
+| :-------------------------- | :--------------- | :------------ |
+| TDOAParams**.**TargetSignal | center_frequency | [20MHz，6GHz] |
+| TDOAParams**.**TargetSignal | bandwidth        | [0，40MHz]    |
+| TDOAParams**.**TargetSignal | attenuation_gain | [-30，20]     |
+| TDOAParams**.**TargetSignal | antenna          | 可选0或1      |
 
 ### iq_acquire.proto
 
@@ -873,3 +944,17 @@ message IQResultHeader{
 5. `rpc RecordOff(TaskAccount) returns (NodeReply) {}`
 
    `RecordOff()`停止节点端的IQ记录功能。该接口向服务端发送了`TaskAccount`，来说明需要停止记录的节点，服务端在收到消息后，会向相关节点发送指令，待节点响应后，向客户端返回`NodeReply`响应结果。如果有的节点之前并没有开启记录，节点则会忽略此操作，并回送错误码。
+
+**IQ数据采集任务参数范围说明**
+
+IQ数据采集任务参数`IQSweepParams`消息中各字段范围如下表：
+
+| 消息                              | 字段                 | 范围                                                        |
+| :-------------------------------- | :------------------- | :---------------------------------------------------------- |
+| IQSweepParams                     | num_sweeps           | [0，max_uint32]                                             |
+| IQSweepParams                     | num_blocks           | [0，max_uint32]                                             |
+| IQSweepParams                     | num_transfer_samples | [512，1024，2048]                                           |
+| IQSweepParams**.**IQSegmentParams | center_freq          | [20MHz，6GHz]                                               |
+| IQSweepParams**.**IQSegmentParams | sample_rate          | [56MHz，28MHz，14MHz，7MHz，3.5MHz， 1.75MHz， 0.875MHz...] |
+| IQSweepParams**.**IQSegmentParams | attenuation_gain     | [-30，20]                                                   |
+| IQSweepParams**.**IQSegmentParams | antenna              | 可选0或1                                                    |
