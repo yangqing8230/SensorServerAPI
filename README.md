@@ -300,16 +300,18 @@ message CmdHeader{
 
 全景扫描任务参数`PScanParams`消息中各字段范围如下表：
 
-| 消息                      | 字段             | 范围                                      |
-| :------------------------ | :--------------- | :---------------------------------------- |
-| PScanParams.FrequencySpan | start_freq       | [20MHz，6GHz]                             |
-| PScanParams.FrequencySpan | stop_freq        | [20MHz，6GHz]                             |
-| PScanParams               | rbw              | [1Hz，1MHz]                               |
-| PScanParams               | monitor_interval | 比较合适的值可选0ms，100ms，500ms，1000ms |
-| PScanParams               | expected_points  | [101，16001]                              |
-| PScanParams               | average_count    | [0，128]                                  |
-| PScanParams               | attenuation_gain | [-30，20]                                 |
-| PScanParams               | antenna          | 可选0或1                                  |
+| 消息                                      | 字段             | 范围                                      |
+| :---------------------------------------- | :--------------- | :---------------------------------------- |
+| PScanParams.FrequencySpan                 | start_freq       | [20MHz，6GHz]                             |
+| PScanParams.FrequencySpan                 | stop_freq        | [20MHz，6GHz]                             |
+| PScanParams.ThresholdSector.FrequencySpan | start_freq       | [20MHz，6GHz]                             |
+| PScanParams.ThresholdSector.FrequencySpan | stop_freq        | [20MHz，6GHz]                             |
+| PScanParams                               | rbw              | [1Hz，1MHz]                               |
+| PScanParams                               | monitor_interval | 比较合适的值可选0ms，100ms，500ms，1000ms |
+| PScanParams                               | expected_points  | [101，16001]                              |
+| PScanParams                               | average_count    | [0，128]                                  |
+| PScanParams                               | attenuation_gain | [-30，20]                                 |
+| PScanParams                               | antenna          | 可选0或1                                  |
 
 ### IF_scan.proto
 
@@ -796,12 +798,13 @@ message TDOAStatus{
 
 TDOA定位任务参数`TDOAParams`消息中各字段范围如下表：
 
-| 消息                    | 字段             | 范围          |
-| :---------------------- | :--------------- | :------------ |
-| TDOAParams.TargetSignal | center_frequency | [20MHz，6GHz] |
-| TDOAParams.TargetSignal | bandwidth        | [0，40MHz]    |
-| TDOAParams.TargetSignal | attenuation_gain | [-30，20]     |
-| TDOAParams.TargetSignal | antenna          | 可选0或1      |
+| 消息                    | 字段             | 范围                                         |
+| :---------------------- | :--------------- | :------------------------------------------- |
+| TDOAParams.TargetSignal | center_frequency | [20MHz，6GHz]                                |
+| TDOAParams.TargetSignal | bandwidth        | [0，40MHz]                                   |
+| TDOAParams.TargetSignal | attenuation_gain | [-30，20]                                    |
+| TDOAParams.TargetSignal | antenna          | 可选0或1                                     |
+| TDOAParams              | interval_msec    | 最小为100ms，无线传输下该值以[500，2000]为宜 |
 
 ### iq_acquire.proto
 
@@ -949,12 +952,13 @@ message IQResultHeader{
 
 IQ数据采集任务参数`IQSweepParams`消息中各字段范围如下表：
 
-| 消息                          | 字段                 | 范围                                                        |
-| :---------------------------- | :------------------- | :---------------------------------------------------------- |
-| IQSweepParams                 | num_sweeps           | [0，max_uint32]                                             |
-| IQSweepParams                 | num_blocks           | [0，max_uint32]                                             |
-| IQSweepParams                 | num_transfer_samples | [512，1024，2048]                                           |
-| IQSweepParams.IQSegmentParams | center_freq          | [20MHz，6GHz]                                               |
-| IQSweepParams.IQSegmentParams | sample_rate          | [56MHz，28MHz，14MHz，7MHz，3.5MHz， 1.75MHz， 0.875MHz...] |
-| IQSweepParams.IQSegmentParams | attenuation_gain     | [-30，20]                                                   |
-| IQSweepParams.IQSegmentParams | antenna              | 可选0或1                                                    |
+| 消息                            | 字段                 | 范围                                                        |
+| :------------------------------ | :------------------- | :---------------------------------------------------------- |
+| IQSweepParams                   | num_sweeps           | [0，max_uint32]                                             |
+| IQSweepParams                   | num_blocks           | [0，max_uint32]                                             |
+| IQSweepParams                   | num_transfer_samples | [512，1024，2048]                                           |
+| IQSweepParams.IQSegmentParams   | center_freq          | [20MHz，6GHz]                                               |
+| IQSweepParams.IQSegmentParams   | sample_rate          | [56MHz，28MHz，14MHz，7MHz，3.5MHz， 1.75MHz， 0.875MHz...] |
+| IQSweepParams.IQSegmentParams   | attenuation_gain     | [-30，20]                                                   |
+| IQSweepParams.IQSegmentParams   | antenna              | 可选0或1                                                    |
+| IQSweepParams.TimeTriggerParams | segment_interval     | 大于100ms                                                   |
