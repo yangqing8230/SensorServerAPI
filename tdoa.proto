@@ -31,6 +31,11 @@ message TDOAParams {
   TDOAOption option = 4;
 }
 
+message TDOAIndex{
+  uint32 position_idx = 1;  //属于第几次定位
+  uint32 signal_idx = 2;    //第几个信号
+}
+
 //启动tdoa任务请求
 message StartTDOARequest{
   repeated NodeDevice task_runner = 1;  //参与任务的单元
@@ -45,42 +50,44 @@ message GeogCoord {
 
 //tdoa错误码
 enum TDOAError {
-	TDOA_ERR_NONE = 0;
-	TDOA_ERR_INIT = 1;
-	TDOA_ERR_NOT_AVAILABLE = 2;
-	TDOA_ERR_PARAM = 3;
-	TDOA_ERR_FILE = 4;
-	TDOA_ERR_BLOCK_ID = 5;
-	TDOA_ERR_BLOCK_TYPE = 6;
-	TDOA_ERR_WAIT_BLOCK = 7;
-	TDOA_ERR_TOO_LATE = 8;
-	TDOA_ERR_TIMESTAMP = 9;
-	TDOA_ERR_CORRELATE = 10;
-	TDOA_ERR_POSITION = 11;
-	TDOA_ERR_INVALID_HANDLE = 12;
+	TDOA_ERR_NONE = 0;          //无错误
+  TDOA_ERR_LACK_QUALIFIED_BLOCK = 1;  //缺少合格的数据块
+	TDOA_ERR_CORRELATE = 2;     //互相关错误
+	TDOA_ERR_POSITION = 3;      //定位错误
 }
 
-//结果头
-message ResultHeader {
-  TDOAError error_code = 1; //错误码
-  string error_info = 2;    //错误信息
-  uint32 position_idx = 3;  //定位次数索引     
-  uint32 signal_idx = 4;    //目标信号索引
-  Timestamp timestamp = 5;  //时间戳    
+//数据块摘要
+message BlockBrief{
+  NodeDevice block_source = 1;      //block的来源
+  GeogCoord acquire_position = 2; //位置
+  Timestamp acquire_time = 3;     //时刻
+  bool uploaded_data = 4;              //是否有数据
+  float peak_level = 5;
 }
 
-//互相关结果
+//两站的互相关
 message Correlation{
-  NodeDevice id = 1;  //节点设备id
-  GeogCoord position = 2; //节点设备位置
-  double arrival_diff = 3; //信号到达的距离差,单位 米
+  NodeDevice block_source = 1;   //block的来源
+  int64 time_offset = 2;      //时间戳偏移, 单位 纳秒
+  double sensor_distance = 3; //两个传感器之间的距离，单位 米
+  double signal_arrival_difference = 4; //信号到达的距离差,单位 米（互相关解算的结果）
 }
 
-//tdoa定位结果
-message PositionResult {
-  ResultHeader header = 1;  //结果头
-  repeated Correlation corr = 2;   //互相关结果,结果数量为有效上报数据的节点,第一个元素为做相关的参考站
-  repeated GeogCoord target_position = 3; //目标位置,解的可能个数[0,2]
+//一个定位批次互相关信息
+message BatchCorrelation{
+  NodeDevice ref_block = 1;   //参考
+  repeated Correlation correlations = 2;  //所有互相关的结果
+}
+
+//目标的定位信息
+message TargetPosition{
+  enum ResolveMethod{
+    DIRECTION = 0;          //双站测向
+    FAST_POSITION = 1;      //快速定位
+    PRECISE_POSITION = 2;   //精确定位
+  }
+  ResolveMethod mtd = 1;                  //解算方式
+  repeated GeogCoord target_position = 2; //目标位置,解的可能个数[0,2]
 }
 
 //tdoa过程数据(各种迹线)
@@ -91,36 +98,35 @@ message TDOATrace {
     TDOA_CORRELATE = 2;	//相关线
   }
   TraceType type = 1;   //迹线类型
-  uint32 position_idx = 2;  //属于第几次定位
-  uint32 signal_idx = 3;    //第几个信号
-  repeated NodeDevice from = 4; //数据来源
-  repeated float trace = 5;     //迹线数据
+  repeated NodeDevice result_from = 2; //数据来源
+  repeated float trace_data = 3;     //迹线数据
 }
 
-//TDOA的结果,至少包含position_result或tdoa_trace
-message TDOAResult {
-  PositionResult position_result = 1; //定位结果,可能为空
-  TDOATrace tdoa_trace = 2;           //过程数据,可能为空
+//TDOA任务产生的数据
+message TDOAProduction{
+  TDOAIndex index = 1;                      //索引
+  TDOAError error_code = 2;                 //错误码
+  repeated BlockBrief block_brief = 3;      //数据块摘要
+  repeated TDOATrace details = 4;           //过程迹线（频谱、IQ、互相关）
+  BatchCorrelation correlation_info = 5;    //互相关结果
+  TargetPosition position_info = 6;         //定位结果
 }
 
-//tdoa节点数据传输状态
-message TDOANodeStatus{
-  NodeDevice id = 1;    //节点设备id
-  uint32 position_idx = 2;  //已传输到哪次定位
-  uint32 signal_idx = 3;    //及哪个信号
-  bool qualified = 4;       //IQ数据是否符合要求(根据设置的电平,超过电平值才传输IQ)
+//tdoa 数据传输状态
+message SensorAcquireProgress{
+  NodeDevice sensor = 1;    //节点设备id
+  TDOAIndex last_received = 2;  //收到的最新索引
 }
 
-//tdoa的传输状态
-message TDOAStatus{
-  repeated TDOANodeStatus status = 1;
+//tdoa任务的进展情况
+message TDOAProgress{
+  repeated SensorAcquireProgress progress = 1;
 }
 
 //tdoa API
 service TDOAService {
   rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
-  rpc GetResult(TaskId) returns (stream TDOAResult) {}  //获取任务结果
-  rpc GetStatus(TaskId) returns (TDOAStatus) {}         //获取任务的数据传输状态
+  rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  //获取任务数据
+  rpc GetTaskProgress(TaskId) returns (TDOAProgress) {}         //获取任务各节点的数据传输进度
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
 }
-

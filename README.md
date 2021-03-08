@@ -670,10 +670,11 @@ message ChangeChannelRequest {
 该文件定义了系统TDOA定位功能的消息和接口，包含四个接口
 
 ```protobuf
+//tdoa API
 service TDOAService {
   rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
-  rpc GetResult(TaskId) returns (stream TDOAResult) {}  //获取任务结果
-  rpc GetStatus(TaskId) returns (TDOAStatus) {}         //获取任务的数据传输状态
+  rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  //获取任务数据
+  rpc GetTaskProgress(TaskId) returns (TDOAProgress) {}         //获取任务各节点的数据传输进度
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
 }
 ```
@@ -724,32 +725,30 @@ message TDOAOption{
 }
 ```
 
-2. `rpc GetResult(TaskId) returns (stream TDOAResult) {} `
+2. `rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  `
 
-   `GetResult()`用于获取TDOA定位的结果，该接口的返回值是一个`TDOAResult`消息流，注意应有**独立的工作线程**来进行结果的接收。结果中包含两项，第一项为定位结果，第二项为过程数据，两者均有可能为空，在客户端中应注意先使用`has_xxx()`进行判断。
+   `GetProduction()`用于获取TDOA定位的结果，该接口的返回值是一个`TDOAProduction`消息流，注意应有**独立的工作线程**来进行结果的接收。结果中包含一次定位的过程数据和结果数据。
 
 ```protobuf
-//TDOA的结果,至少包含position_result或tdoa_trace
-message TDOAResult {
-  PositionResult position_result = 1; //定位结果,可能为空
-  TDOATrace tdoa_trace = 2;           //过程数据,可能为空
+//TDOA任务产生的数据
+message TDOAProduction{
+  TDOAIndex index = 1;                      //索引
+  TDOAError error_code = 2;                 //错误码
+  repeated BlockBrief block_brief = 3;      //数据块摘要
+  repeated TDOATrace details = 4;           //过程迹线（频谱、IQ、互相关）
+  BatchCorrelation correlation_info = 5;    //互相关结果
+  TargetPosition position_info = 6;         //定位结果
 }
 ```
 
-```protobuf
-//tdoa定位结果
-message PositionResult {
-  ResultHeader header = 1;  //结果头
-  repeated Correlation corr = 2;   //互相关结果,结果数量为有效上报数据的节点,第一个元素为做相关的参考站
-  repeated GeogCoord target_position = 3; //目标位置,解的可能个数[0,2]
-}
-```
+其中
 
-定位的结果数据`PositionResult`包含一次定位的结果信息，其中
-
-- `header`结果头中包含本次结果属于第几次定位和第几个目标，以及错误信息字符串和错误码等。
-- `corr`包含站点互相关运算的结果，主要包含站点位置和信号到达距离差等信息，客户端可用此信息在地图上显示节点设备的位置和双曲线。
-- `target_position`包含目标的方位信息，注意结果项是**repeated**，可能有[0,2]个解存在，应根据`header`中的错误码和错误信息，确定该定位结果是否可信。
+- `index`中包含本次结果属于第几次定位和第几个目标。
+- `error_code`指明错误码信息，只有是`TDOA_ERR_NONE`的情况下，定位结果是有效的。
+- `block_brief`包含本次定位的所有数据块摘要，主要包括采集设备id、采集位置、采集时刻、是否包含数据等信息。
+- `details`是一组定位过程中产生的曲线数据，其中的每一个数据项是一个`TDOATrace`消息，根据任务选项的设定，可能是频谱曲线、IQ曲线、互相关曲线。
+- `correlation_info`是定位过程中产生的互相关数据。
+- `position_info`包含定位结果，其中的`target_position`给出目标的方位信息。系统会根据实际的互相关计算结果，自行确定定位方法，根据定位方法的不同，该子消息中的`target_position`中解的个数和含义也不同，具体使用请参照示例程序。
 
 ```protobuf
 //tdoa过程数据(各种迹线)
@@ -760,31 +759,25 @@ message TDOATrace {
     TDOA_CORRELATE = 2;	//相关线
   }
   TraceType type = 1;   //迹线类型
-  uint32 position_idx = 2;  //属于第几次定位
-  uint32 signal_idx = 3;    //第几个信号
-  repeated NodeDevice from = 4; //数据来源
-  repeated float trace = 5;     //迹线数据
+  repeated NodeDevice result_from = 2; //数据来源
+  repeated float trace_data = 3;     //迹线数据
 }
 ```
 
-定位的过程数据`TDOATrace`包含定位过程数据，一般会在给出定位结果之前传送给客户端，所以在客户端看来，`GetResult()`返回的流，总是N个过程数据外加1个定位结果数据，循环往复，具体N为多少，取决于有效回送数据的站点个数和TDOA任务选项。
+3. `rpc GetTaskProgress(TaskId) returns (TDOAProgress) {} `
 
-3. `rpc GetStatus(TaskId) returns (TDOAStatus) {} `
-
-   `GetStatus()`用来获取当前TDOA任务的状态，可以通过这个接口查看所有任务节点上报数据的进度。
+   `GetTaskProgress()`用来获取当前TDOA任务的状态，可以通过这个接口查看所有任务节点上报数据的进度。
 
 ```protobuf
-//tdoa节点数据传输状态
-message TDOANodeStatus{
-  NodeDevice id = 1;    //节点设备id
-  uint32 position_idx = 2;  //已传输到哪次定位
-  uint32 signal_idx = 3;    //及哪个信号
-  bool qualified = 4;       //IQ数据是否符合要求(根据设置的电平,超过电平值才传输IQ)
+//tdoa 数据传输状态
+message SensorAcquireProgress{
+  NodeDevice sensor = 1;    //节点设备id
+  TDOAIndex last_received = 2;  //收到的最新索引
 }
 
-//tdoa的传输状态
-message TDOAStatus{
-  repeated TDOANodeStatus status = 1;
+//tdoa任务的进展情况
+message TDOAProgress{
+  repeated SensorAcquireProgress progress = 1;
 }
 ```
 
