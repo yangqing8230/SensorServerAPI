@@ -47,6 +47,13 @@ enum SignalModulateType{
     QAM = 12;
 }
 
+//频谱结果
+message SpectrumResult{
+    double start_freq = 1;              //起始频率
+    double stop_freq  = 2;              //终止频率
+    repeated float spectrum_trace = 3;  //频谱曲线
+}
+
 //ITU参数
 message ITUParams{
     SignalModulateType modulate_type = 1; //调制类型
@@ -65,13 +72,13 @@ message PulseParams{
 
 //中频扫描结果
 message IFScanResult {
-    NodeDevice result_from = 1;       //结果来源
-    uint32 sequence_number = 2;       //顺序号
-    Timestamp timestamp = 3;            //时间戳
-    repeated float spectrum_trace = 4;  //频谱曲线
-    repeated float IQ_trace = 5;        //IQ曲线
-    ITUParams ituParams = 6;            //ITU参数
-    PulseParams pulseParams = 7;        //脉冲测量参数
+    NodeDevice result_from = 1;          //结果来源
+    uint32 sequence_number = 2;          //顺序号
+    Timestamp timestamp = 3;             //时间戳
+    SpectrumResult spectrum_result = 4;  //频谱曲线
+    repeated float IQ_trace = 5;         //IQ曲线
+    ITUParams ituParams = 6;             //ITU参数
+    PulseParams pulseParams = 7;         //脉冲测量参数
 }
 
 //中频扫描API
