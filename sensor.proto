@@ -75,7 +75,8 @@ enum TaskType {
   TDOA_POSITION = 5;    //tdoa定位
   IQ_ACQUIRE = 6;       //iq数据采集
   DRONE_DETECT = 7;     //无人机探测
-  ZERO_SPAN = 8;      //零扫宽扫描
+  ZERO_SPAN = 8;        //零扫宽扫描
+  MUTI_SCAN = 9;        //
 };
 
 //任务摘要
