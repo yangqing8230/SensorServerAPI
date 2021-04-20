@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package zb.sensor.scan.multiscan; //c++:对应于zb::sensor::scan::multiscan命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.scan.multiscan";
+option java_outer_classname = "MultiScanProto";
+
+import "sensor.proto";  //导入sensor.proto,以提供系统的基础消息类型
+import "scan.proto";    //导入scan.proto,以提供扫描的消息类型
+
+//多段扫描任务参数
+message MultiScanParams {
+  FrequencySpan freq_span = 1;          //频率范围,单位Hz
+  FrequencySpan part_span = 2;          //频率范围,单位Hz
+  double        rbw = 3;                //分辨率,单位Hz
+  int32         monitor_interval = 4;   //数据回传间隔,单位ms
+  int32         expected_points = 5;    //希望显示的点数[101,16001]
+  int32         part_points = 6;        //希望显示的点数[101,16001]
+  int32         average_count = 7;      //平均次数[0,128]
+  int32         attenuation_gain = 8;   //衰减增益[-30, 20]
+  int32         antenna = 9;            //天线选择[0,1]
+  ResultOption  result_option = 10;     //结果选项,启用的功能可选
+}
+
+//启动多段扫描请求
+message StartMultiScanRequest {
+  repeated NodeDevice task_runner = 1;  //参与任务的节点设备
+  MultiScanParams multiscan_params = 2;     //任务参数
+}
+
+//监测范围改变的请求
+message ChangeRangeRequest {
+  TaskAccount task_account = 1;     //任务账号
+  FrequencySpan span = 2;           //要监测的范围
+  int32  expected_points = 3;       //希望显示的点数[101,16001]
+}
+
+message DataResult {
+  FrequencySpan freq_span = 1;          //频率范围
+  repeated float realtime_trace = 2;    //实时频谱线
+  DataHoldResult data_hold_result = 3;  //数据保持结果
+}
+
+message ResultBody {
+ DataResult   allData_result=1;  //全局数据
+ DataResult   partData_result=2; //局部数据
+ DetectResult detect_result = 3; //信号检测结果
+}
+
+//多段扫描结果
+message MultiScanResult {
+  NodeDevice result_from = 1;  //结果来自哪个节点设备
+  uint32 sequence_number = 2;  //结果顺序号
+  Timestamp timestamp = 3;     //时间戳
+  ResultBody resultBody = 4;   //结果体
+}
+
+service MultiScanService {
+  rpc Start(StartMultiScanRequest) returns (TaskAccount) {} //启动任务
+  rpc GetResult(TaskId) returns (stream MultiScanResult) {} //获取任务结果
+  rpc ChangeRange(ChangeRangeRequest) returns (NodeReply) {}  //改变监测范围,注意:同时回传全局和局部数据,不改变实际的扫描范围
+  rpc Stop(TaskId) returns (NodeReply) {}                   //停止任务
+  rpc ResetMaxHold(TaskAccount) returns (NodeReply) {}      //重置最大保持
+  rpc ResetSignalList(TaskAccount) returns (NodeReply) {}   //重置信号列表
+}
