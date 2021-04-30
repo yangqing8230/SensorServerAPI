@@ -39,9 +39,10 @@ message LevelTriggerParams{
 message IQSweepParams{
 	uint32       num_sweeps = 1;                    //扫描次数[0,max_uint32]
 	uint32		 num_blocks = 2;	                 //每个频点的扫描块个数[0,max_uint32]	
-	uint32		 num_transfer_samples = 3;          //每个扫描块的采集点数[512,1024,2048]
-    TimeTriggerParams time_trigger_params = 4;      //时间触发参数,可选项
-    repeated IQSegmentParams segment_params = 5;    //要采集的频点
+    uint32		 num_transfer_samples = 3;          //每个扫描块的采集点数[512,1024,2048]
+    bool         header_only = 4;                   //是否只传header，在任务只存储而不关注实时结果时可以设置为true
+    TimeTriggerParams time_trigger_params = 5;      //时间触发参数,可选项
+    repeated IQSegmentParams segment_params = 6;    //要采集的频点
 }
 
 //IQ扫描的单频点参数
