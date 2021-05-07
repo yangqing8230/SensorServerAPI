@@ -21,8 +21,9 @@ enum Demodulation {
 
 //解调信道
 message AnalogDemodChannel {
-  double        demod_frequency = 1;  //解调频率 单位Hz
-  double        demod_bandwidth = 2;  //解调带宽 单位Hz[1kHz-1MHz]
+  double        demod_frequency = 1;       //解调频率 单位Hz
+  double        demod_bandwidth = 2;       //解调带宽 单位Hz[1kHz-1MHz]
+  double        demod_beat_frequency = 3;  //拍频频率 单位Hz[100MHz-1kHz]
 }
 
 //解调的频谱参数
