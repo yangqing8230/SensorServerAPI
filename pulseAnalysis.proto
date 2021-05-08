@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package zb.sensor.pulseAna;  //c++:对应于zb::sensor::pulseAna命名空间
+
+option java_multiple_files = true;
+option java_package = "com.zb.sensor.pulseAna";
+option java_outer_classname = "PulseAnalysisProto";
+
+import "sensor.proto";
+
+//检波模式
+enum DetectMode	{
+  MAXHOLD = 0;
+  MINHOLD = 1;
+  CURRENT = 2;
+  AVERAGE = 3;
+}
+
+//通道模式
+enum ChannelMode  {
+  NORMAL = 0;			           
+  LOWNOISE = 1;			        
+  LOWDISTORT = 2;
+}
+
+//调谐参数
+message TunerParams {
+  double startFreq = 1;	 //起始频率，Hz
+  double stopFreq = 2; 	 //终止频率，Hz
+  double rbw=3;          //分辨率带宽，Hz
+}
+
+//通道参数
+message ChannelParam {
+  ChannelMode channelMode = 1;		   		    
+  double attGain = 2;		       
+}
+
+//显示参数
+message DisplayParams{
+  int32 tracePoints = 1;			//轨迹点数，检波
+  int32 interval = 2;		    	//回传间隔
+  DetectMode detectMode = 3;  //检波模式
+}
+
+//脉冲分析参数
+message PulseParams
+{
+	int32 noiseThreshold=1;         //噪声门限
+	int32 preOverThresholdPoint=2;  //脉冲起始检测时判断连续过门限的数据点数
+	int32 postOverThresholdPoint=3; //脉冲结束检测时判断连续过门限的数据点数
+	int32 movingAvgPoint=4;         //滑动平均点数
+}
+	
+message PulseAnaParams {			
+  TunerParams tunerParams = 1;
+  ChannelParam chanParam = 2;	
+  DisplayParams displayParams = 3;
+  PulseParams pulseParams = 4; 
+}
+
+//request
+message PulseAnaRequest {
+  repeated NodeDevice taskRunner = 1;
+  PulseAnaParams pulseAnaParams = 2;
+}
+
+//脉冲结果
+message PulseResult
+{
+	int32 index=1;        //脉冲标号
+	double arrivalTime=2; //到达时间
+	double width=3;       //脉冲宽度
+	double amplitude=4;   //脉冲幅度
+}
+
+//result
+message PulseAnaResult {
+  NodeDevice resultFrom = 1;
+  repeated PulseResult pulseList = 2;
+}
+
+service PulseAnaService {
+  rpc StartPulseAna(PulseAnaRequest) returns (TaskAccount) {}
+  rpc GetResult(TaskId) returns (stream PulseAnaResult) {}
+  rpc StopPulseAna(TaskId) returns (NodeReply) {} 
+}

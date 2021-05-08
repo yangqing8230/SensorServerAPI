@@ -387,13 +387,13 @@ message Option{
 ```protobuf
 //中频扫描结果
 message IFScanResult {
-    NodeDevice result_from = 1;       //结果来源
-    uint32 sequence_number = 2;       //顺序号
-    Timestamp timestamp = 3;            //时间戳
-    repeated float spectrum_trace = 4;  //频谱曲线
-    repeated float IQ_trace = 5;        //IQ曲线
-    ITUParams ituParams = 6;            //ITU参数
-    PulseParams pulseParams = 7;        //脉冲测量参数
+    NodeDevice result_from = 1;           //结果来源
+    uint32 sequence_number = 2;           //顺序号
+    Timestamp timestamp = 3;              //时间戳
+    repeated float spectrum_trace = 4;    //频谱曲线
+    repeated float IQ_trace = 5;          //IQ曲线
+    ITUParams ituParams = 6;              //ITU参数
+    repeated PulseParams pulseParams = 7; //脉冲测量参数
 }
 ```
 
@@ -413,11 +413,13 @@ message ITUParams{
 
 ```protobuf
 //脉冲测量参数
-message PulseParams{
-    double pulse_level = 1;         //脉冲幅度
-    double pulse_width = 2;         //脉冲宽度
-    double pulse_period = 3;        //脉冲周期
-    double occupancy = 4;           //占空比
+message PulseParams
+    double pulse_serial_number = 1;   //脉冲标号
+    double pulse_width = 2;           //脉冲宽度
+    double pulse_level = 3;           //脉冲幅度
+    Timestamp pulse_arrive_time = 4;  //脉冲到达时间
+    //double pulse_period = 5;        //脉冲周期
+    //double occupancy = 6;           //占空比
 }
 ```
 
@@ -655,17 +657,18 @@ message ChangeChannelRequest {
 
 模拟解调任务参数`AnalogDemodParms`消息中各字段范围如下表：
 
-| 消息                                 | 字段             | 范围                                      |
-| :----------------------------------- | :--------------- | :---------------------------------------- |
-| AnalogDemodParms.AnalogDemodChannel  | demod_frequency  | [20MHz，6GHz]                             |
-| AnalogDemodParms.AnalogDemodChannel  | demod_bandwidth  | [1kHz，1MHz]                              |
-| AnalogDemodParms                     | attenuation_gain | [-30，20]                                 |
-| AnalogDemodParms                     | antenna          | 可选0或1                                  |
-| AnalogDemodParms.AnalogSpectrumParms | center_frequency | [20MHz，6GHz]                             |
-| AnalogDemodParms.AnalogSpectrumParms | bandwidth        | [0，40MHz]                                |
-| AnalogDemodParms.AnalogSpectrumParms | expected_points  | [101，16001]                              |
-| AnalogDemodParms.AnalogSpectrumParms | average_count    | [0，128]                                  |
-| AnalogDemodParms.AnalogSpectrumParms | monitor_interval | 比较合适的值可选0ms，100ms，500ms，1000ms |
+| 消息                                 | 字段                 | 范围                                      |
+| :----------------------------------- | :------------------- | :---------------------------------------- |
+| AnalogDemodParms.AnalogDemodChannel  | demod_frequency      | [20MHz，6GHz]                             |
+| AnalogDemodParms.AnalogDemodChannel  | demod_bandwidth      | [1kHz，1MHz]                              |
+| AnalogDemodParms.AnalogDemodChannel  | demod_beat_frequency | [100MHz，1kHz]                            |
+| AnalogDemodParms                     | attenuation_gain     | [-30，20]                                 |
+| AnalogDemodParms                     | antenna              | 可选0或1                                  |
+| AnalogDemodParms.AnalogSpectrumParms | center_frequency     | [20MHz，6GHz]                             |
+| AnalogDemodParms.AnalogSpectrumParms | bandwidth            | [0，40MHz]                                |
+| AnalogDemodParms.AnalogSpectrumParms | expected_points      | [101，16001]                              |
+| AnalogDemodParms.AnalogSpectrumParms | average_count        | [0，128]                                  |
+| AnalogDemodParms.AnalogSpectrumParms | monitor_interval     | 比较合适的值可选0ms，100ms，500ms，1000ms |
 
 ### TDOA.proto
 
