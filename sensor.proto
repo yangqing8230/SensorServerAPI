@@ -89,6 +89,12 @@ message TaskSummary {
   Timestamp startTime = 5;//起始时刻
 }
 
+message DeviceInfo {
+  DeviceId id = 1;        //节点id
+  Position position = 2;  //节点位置
+  double temperature = 3;  //温度
+}
+
 //感知节点信息
 message NodeInfo {
   NodeId id = 1;          //节点id
@@ -97,6 +103,7 @@ message NodeInfo {
   Position position = 4;          //节点位置
   repeated DeviceId devices = 5;  //隶属于节点的设备列表
   repeated TaskSummary tasks = 6; //节点正在运行的任务列表
+  repeated DeviceInfo  deviceInfoList= 7;   //隶属于节点设备信息列表
 }
 
 //命令摘要
