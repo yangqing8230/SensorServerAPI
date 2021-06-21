@@ -377,7 +377,7 @@ message Option{
 }
 ```
 
-- `enable_pulse_measurement`为`true`时，使能脉冲测量功能，结果中将带有脉冲测量的结果。
+- `enable_pulse_measurement`为`true`时，使能脉冲测量功能，结果中将带有脉冲测量的结果
 - `sync_acquire_time`有效时，使能时间同步测量功能，多个节点的中频分析结果将是在时间同步的前提下采集并分析处理的。
 
 2. `rpc GetResult(TaskId) returns (stream IFScanResult) {}`
@@ -393,6 +393,7 @@ message IFScanResult {
     repeated float spectrum_trace = 4;    //频谱曲线
     repeated float IQ_trace = 5;          //IQ曲线
     ITUParams ituParams = 6;              //ITU参数
+    repeated PulseParams pulseParams = 7; //脉冲测量参数
 }
 ```
 
@@ -405,6 +406,20 @@ message ITUParams{
     double center_freq = 2;         //中心频率
     double bandwidth = 3;           //带宽
     double power = 4;               //功率
+}
+```
+
+第七项`pulseParams`定义如下，该子消息在中频分析选项中使能脉冲测量时，将给出脉冲测量的参数，不使能则不存在。
+
+```protobuf
+//脉冲测量参数
+message PulseParams
+    double pulse_serial_number = 1;   //脉冲标号
+    double pulse_width = 2;           //脉冲宽度
+    double pulse_level = 3;           //脉冲幅度
+    Timestamp pulse_arrive_time = 4;  //脉冲到达时间
+    //double pulse_period = 5;        //脉冲周期
+    //double occupancy = 6;           //占空比
 }
 ```
 
@@ -572,38 +587,13 @@ message AnalogDemodParms{
 - `AnalogSpectrumParms`为频谱参数，可选，如果该子消息为空，则结果中只包含音频，没有频谱曲线
 
 ```protobuf
-//解调信道
-message AnalogDemodChannel {
-  double        demod_frequency = 1;       //解调频率 单位Hz
-  double        demod_bandwidth = 2;       //解调带宽 单位Hz[1kHz-1MHz]
-  double        demod_beat_frequency = 3;  //拍频频率 单位Hz[100MHz-1kHz]
-}
-```
-
-当解调类型选择连续波时，demod_beat_frequency用于设置拍频频率 ；当解调类型选择其他类型时，demod_beat_frequency设置为零即可。
-
-解调类型消息定义如下：
-
-```protobuf
-//解调类型
-enum Demodulation {
-  NONE = 0;     	
-  AM   = 1;	 
-  FM   = 2; 
-  CW   = 3; //连续波
-  ISB  = 4; //独立边带
-  USB = 5;  //上边带
-}
-```
-
-```protobuf
 //解调的频谱参数
 message AnalogSpectrumParms{
   double        center_frequency = 1; //频谱的中心频率 单位 Hz
   double        bandwidth = 2;        //频谱的带宽, 单位 Hz ≤40MHz
   int32         expected_points = 3;  //希望显示的点数
   int32         average_count = 4;    //平均次数[0,128]
-  int32         monitor_interval = 5; //回传间隔 单位ms
+  int32         monitor_interval = 5;  //回传间隔 单位ms
 }
 ```
 
@@ -968,115 +958,3 @@ IQ数据采集任务参数`IQSweepParams`消息中各字段范围如下表：
 | IQSweepParams.IQSegmentParams   | attenuation_gain     | [-30，20]                                                   |
 | IQSweepParams.IQSegmentParams   | antenna              | 可选0或1                                                    |
 | IQSweepParams.TimeTriggerParams | segment_interval     | 大于100ms                                                   |
-
-### pulseAnalysis.proto
-
-`pulseAnalysis.proto`定义了系统脉冲分析功能的消息和接口。
-
-包含4个服务接口
-
-```protobuf
-//脉冲分析API
-service PulseAnaService {
-  rpc StartPulseAna(PulseAnaRequest) returns (TaskAccount) {}        //开始脉冲分析任务
-  rpc GetResult(TaskId) returns (stream PulseAnaResult) {}           //获取脉冲分析结果
-  rpc ChangeThreshold(ChangeThresholdRequest) returns (NodeReply) {} //改变脉冲分析门限
-  rpc StopPulseAna(TaskId) returns (NodeReply) {}                    //停止脉冲分析任务
-}
-```
-
-1. `rpc StartPulseAna(PulseAnaRequest) returns (TaskAccount) {}`
-
-   `Start()`启动一个脉冲分析任务，以`PulseAnaRequest`类型的消息作为请求，系统返回`TaskAccount`消息作为本任务账号。`PulseAnaRequest`的第一个消息为执行任务的节点设备，第二个消息为`PulseAnaParams`类型的任务参数。
-
-```protobuf
-//脉冲分析请求
-message PulseAnaRequest {
-  repeated NodeDevice taskRunner = 1; //任务执行单元
-  PulseAnaParams pulseAnaParams = 2;  //分析参数
-}
-```
-
-```protobuf
-//脉冲分析参数
-message PulseAnaParams {			
-	double		centerFrequency=1; //中心频率
-	double		sampleRate=2;      //采样率
-	double		attenuation=3;     //衰减增益
-	int32	    antenna=4;         //天线选择
-	int32		preamp=5;          //增益   
-    double      thresholdLevel=6;  //门限
-    int32       pointParam=7;      //判断点数
-}
-```
-
-`PulseAnaParams`消息描述的脉冲分析的任务参数。
-
-- `centerFrequency` 待分析的频段中心频率
-- `sampleRate`采样率
-- `attenuation`衰减增益设置，同全景扫描
-- antenna天线选择，同全景扫描
-- preamp增益
-- thresholdLevel脉冲分析门限
-- pointParam判断点数
-
-2. `rpc GetResult(TaskId) returns (stream PulseAnaResult) {}`
-
-   `GetResult()`用于获取脉冲分析结果。该接口的返回值是一个`PulseAnaResult`消息流，注意应有**独立的工作线程**来进行结果的接收。
-
-```protobuf
-//脉冲分析结果
-message PulseAnaResult {
-  NodeDevice resultFrom = 1;
-  repeated PulseResult pulseList = 2;
-}
-```
-
-结果中，`resultFrom`与全景扫描类似，不再赘述。第二项`PulseResult`定义如下，该子消息给出脉冲参数。
-
-```protobuf
-//脉冲参数
-message PulseResult
-{
-  uint32   pulseIndex=1;    //脉冲标号          
-  double   pulseWidth=2;    //脉冲宽度    
-  double   pulseAmpl=3;     //脉冲幅度      
-  uint32   timeSeconds=4;   //脉冲到达时间(秒)      
-  uint32   timeNSeconds=5;  //脉冲到达时间(微秒) 
-  uint32   repeatedPeriod=6;//脉冲周期      
-  double   dutyRatio=7;     //占空比        
-}
-```
-
-3. `rpc ChangeThreshold(ChangeThresholdRequest) returns (NodeReply) {}`
-
-   ChangeThreshold()用于改变脉冲分析门限，`ChangeThresholdRequest`消息定义如下：
-
-   ```protobuf
-   //脉冲分析门限改变的请求
-   message ChangeThresholdRequest {
-     TaskAccount task_account = 1;   //任务账号
-     double  pulseThreshold=2;       //门限
-   }
-   ```
-
-4. `rpc StopPulseAna(TaskId) returns (NodeReply) {} `
-
-   以任务id为请求，结束脉冲分析任务。
-
-**脉冲分析任务参数范围说明**
-
-脉冲分析任务参数`PulseAnaParams`消息中各字段范围如下表：
-
-| 消息           | 字段           | 范围          |
-| :------------- | :------------- | :------------ |
-| PulseAnaParams | center_freq    | [20MHz，6GHz] |
-| PulseAnaParams | sampleRate     | [0Hz，40MHz]  |
-| PulseAnaParams | attenuation    | [-30，20]     |
-| PulseAnaParams | antenna        | 可选0或1      |
-| PulseAnaParams | preamp         | [101，16001]  |
-| PulseAnaParams | thresholdLevel |               |
-| PulseAnaParams | pointParam     |               |
-
-
-
