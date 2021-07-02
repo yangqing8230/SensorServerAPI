@@ -10,43 +10,41 @@ import "sensor.proto";
 
 //脉冲分析参数	
 message PulseAnaParams {			
-	double		centerFrequency=1;  
-	double		sampleRate=2;      
-	double		attenuation=3;     
-	int32	    antenna=4;      
-	int32		  preamp=5;             
-  double    thresholdLevel=6;     
-  int32    pointParam=7;    
+	double		center_freq=1;      //中心频率,单位Hz[20MHz,6GHz]
+	double		sample_rate=2;      //采样率,单位Hz[56M, 28M, 14M, 7M, 3.5M, 1.75M, 0.875M...]
+	double		attenuation_gain=3; //衰减增益[-30,20]
+	int32	    antenna=4;          //天线选择[0,1] 
+  double    threshold_level=5;  //门限电平dBm 
+  int32     point_judge=6;      //判断点数,无需设置
 }
 
 //request
 message PulseAnaRequest {
-  repeated NodeDevice taskRunner = 1;
+  repeated NodeDevice task_runner = 1;
   PulseAnaParams pulseAnaParams = 2;
 }
 
 //脉冲分析门限改变的请求
 message ChangeThresholdRequest {
   TaskAccount task_account = 1;   //任务账号
-  double  pulseThreshold=2;       //门限
+  double  threshold_Level=2;      //门限
 }
 
 //脉冲结果
 message PulseResult
 {
-  uint32   pulseIndex=1;              
-  double   pulseWidth=2;         
-  double   pulseAmpl=3;             
-  uint32   timeSeconds=4;           
-  uint32   timeNSeconds=5;   
-  uint32   repeatedPeriod=6;            
-  double   dutyRatio=7;                
+  uint32   pulse_index=1;    //脉冲标号[0,255]         
+  double   pulse_width=2;    //脉冲宽度,单位ns 
+  double   pulse_amp=3;      //脉冲幅度,单位dBm  
+  double   pulse_period=4;   //脉冲周期,单位ns      
+  double   duty_ratio=5;     //占空比   
+  Timestamp timestamp=6;     //脉冲到达时间
 }
 
 //result
 message PulseAnaResult {
-  NodeDevice resultFrom = 1;
-  repeated PulseResult pulseList = 2;
+  NodeDevice result_from = 1;
+  repeated PulseResult pulse_list = 2;
 }
 
 service PulseAnaService {

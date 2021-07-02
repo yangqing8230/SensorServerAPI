@@ -8,23 +8,16 @@ option java_outer_classname = "IFScanProto";
 
 import "sensor.proto";
  
-//中频扫描选项
-message Option{
-    bool enable_pulse_measurement = 1;  //使能脉冲测量
-    Timestamp sync_acquire_time = 2;    //使能多点时间同步测量
-}
-
 //中频扫描参数
 message IFScanParams {
     double center_freq = 1;         //中心频率 单位 Hz
-    double bandwidth = 2;           //带宽 单位 Hz
+    double band_width = 2;           //带宽 单位 Hz
     double rbw = 3;                 //分辨率带宽 单位 Hz
     int32 interval = 4;             //回传间隔 单位ms
     int32 spectrum_points = 5;      //频谱显示点数
     bool  iq_output = 6;            //是否回传IQ
     int32 attenuation_gain = 7;     //衰减增益
     int32 antenna = 8;              //天线选择
-    Option options = 9;             //中频扫描选项
 }
 
 //启动中频扫描请求
@@ -34,7 +27,7 @@ message StartIFScanRequest{
 }
 
 //信号调制类型(调制识别功能支持的类型)
-enum SignalModulateType{
+enum ModulateType{
 		UNKNOWM = 0;
 		AM = 1;
 		AMSC = 10;
@@ -72,8 +65,17 @@ enum SignalModulateType{
 		QAM256 = 64;
 		CW = 7;
 		Noise = 8;
-		DOING = 9;
+		RECOGNIZING = 9;
 }
+
+enum DetectType 
+{
+	UNDETECT = 0;		//未知
+	NARROW_BAND = 1;	//窄带信号
+	WIDE_BAND = 2;		//宽带信号
+	PULSE = 3;			//脉冲
+	DETECTING = 4;		//正在检测
+} 
 
 //频谱结果
 message SpectrumResult{
@@ -84,10 +86,11 @@ message SpectrumResult{
 
 //ITU参数
 message ITUParams{
-    SignalModulateType modulate_type = 1; //调制类型
+    ModulateType modulate_type = 1; //调制类型
     double center_freq = 2;         //中心频率
-    double bandwidth = 3;           //带宽
+    double band_width = 3;          //带宽
     double power = 4;               //功率
+	double time_occupancy = 5;		//时间占用度
 }
 
 //中频扫描结果
@@ -97,7 +100,8 @@ message IFScanResult {
     Timestamp timestamp = 3;                 //时间戳
     SpectrumResult spectrum_result = 4;      //频谱曲线
     repeated float IQ_trace = 5;             //IQ曲线
-    ITUParams ituParams = 6;                 //ITU参数
+    DetectType detect_type =6;		         //信号类型
+	ITUParams ituParams = 7;                 //ITU参数
 }
 
 //中频扫描API

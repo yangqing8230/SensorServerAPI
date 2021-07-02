@@ -344,41 +344,26 @@ message StartIFScanRequest{
 //中频扫描参数
 message IFScanParams {
     double center_freq = 1;         //中心频率 单位 Hz
-    double bandwidth = 2;           //带宽 单位 Hz
+    double band_width = 2;          //带宽 单位 Hz
     double rbw = 3;                 //分辨率带宽 单位 Hz
     int32 interval = 4;             //回传间隔 单位ms
     int32 spectrum_points = 5;      //频谱显示点数
     bool  iq_output = 6;            //是否回传IQ
     int32 attenuation_gain = 7;     //衰减增益
     int32 antenna = 8;              //天线选择
-    Option options = 9;             //中频扫描选项
 }
 ```
 
 `IFScanParams`消息描述的中频扫描的任务参数。
 
 - `center_freq` 待分析的频段中心频率
-- `bandwidth`待分析的频段带宽，最大可设为`40e6`，即`40MHz`
+- `band_width`待分析的频段带宽，最大可设为`40e6`，即`40MHz`
 - `rbw`频谱的分辨率，同全景扫描
 - `interval`回传间隔，典型可设置为`1000`，即1秒回传一次结果
 - `spectrum_points`希望的频谱显示点数，同全景扫描
 - `iq_output`是否传送`IQ`原始数据
 - `attenuation_gain`衰减增益设置，同全景扫描
 - `antenna` 天线选择，同全景扫描
-- `options`中频扫描选项
-
-中频扫描的选项包含两项，分别为使能脉冲测量和使能时间同步测量。通过`Option`消息类型定义。
-
-```protobuf
-//中频扫描选项
-message Option{
-    bool enable_pulse_measurement = 1;  //使能脉冲测量
-    Timestamp sync_acquire_time = 2;    //使能多点时间同步测量
-}
-```
-
-- `enable_pulse_measurement`为`true`时，使能脉冲测量功能，结果中将带有脉冲测量的结果。
-- `sync_acquire_time`有效时，使能时间同步测量功能，多个节点的中频分析结果将是在时间同步的前提下采集并分析处理的。
 
 2. `rpc GetResult(TaskId) returns (stream IFScanResult) {}`
 
@@ -387,24 +372,85 @@ message Option{
 ```protobuf
 //中频扫描结果
 message IFScanResult {
-    NodeDevice result_from = 1;           //结果来源
-    uint32 sequence_number = 2;           //顺序号
-    Timestamp timestamp = 3;              //时间戳
-    repeated float spectrum_trace = 4;    //频谱曲线
-    repeated float IQ_trace = 5;          //IQ曲线
-    ITUParams ituParams = 6;              //ITU参数
+	NodeDevice result_from = 1;              //结果来源
+    uint32 sequence_number = 2;              //顺序号
+    Timestamp timestamp = 3;                 //时间戳
+    SpectrumResult spectrum_result = 4;      //频谱曲线
+    repeated float IQ_trace = 5;             //IQ曲线
+    DetectType detect_type =6;		         //信号类型
+	ITUParams ituParams = 7;                 //ITU参数
 }
 ```
 
-结果中，`result_from`，`sequence_number`，`timestamp`与全景扫描类似，不再赘述。第四项`spectrum_trace`给出中频分析的频谱曲线；第五项`IQ_trace`在中频分析选项中使能`enable_pulse_measurement`时，将给出原始IQ曲线，不使能情况下数组长度为0；第六项`ituParams`定义如下，该子消息给出信号的ITU参数。
+结果中，`result_from`，`sequence_number`，`timestamp`与全景扫描类似，不再赘述。第四项`spectrum_trace`给出中频分析的频谱曲线；第五项`IQ_trace`在中频分析选项中使能`true`时，将给出原始IQ曲线，不使能情况下数组长度为0；第六项`detect_type`定义如下，该子消息给出检测出的信号类型。
+
+```protobuf
+enum DetectType 
+{
+	UNDETECT = 0;		//未知
+	NARROW_BAND = 1;	//窄带信号
+	WIDE_BAND = 2;		//宽带信号
+	PULSE = 3;			//脉冲
+	DETECTING = 4;		//正在检测
+}
+```
+
+第七项`ituParams`定义如下，该子消息给出信号的ITU参数。
 
 ```protobuf
 //ITU参数
 message ITUParams{
-    SignalModulateType modulate_type = 1; //调制类型
+    ModulateType modulate_type = 1; //调制类型
     double center_freq = 2;         //中心频率
-    double bandwidth = 3;           //带宽
+    double band_width = 3;          //带宽
     double power = 4;               //功率
+	double time_occupancy = 5;		//时间占用度
+}
+```
+
+其中`modulate_type`定义了信号调制类型，如下：
+
+```protobuf
+//信号调制类型(调制识别功能支持的类型)
+enum ModulateType{
+		UNKNOWM = 0;
+		AM = 1;
+		AMSC = 10;
+		AMTC = 11;
+		SSB = 12;
+		DSB = 13;
+		VSB = 14;
+		LSB = 15;
+		USB = 16;
+		ASK = 2;
+		ASK2 = 20;
+		ASK4 = 21;
+		ASK8 = 22;
+		ASK16 = 23;
+		FM = 3;
+		FSK = 4;
+		FSK2 = 40;
+		FSK4 = 41;
+		FSK8 = 42;
+		FSK16 = 43;
+		MSK = 44;
+		PSK = 5;
+		BPSK = 50;
+		OQPSK = 51;
+		QPSK = 52;
+		Pi4QPSK = 53;
+		PSK8 = 54;
+		PSK16 = 55;
+		D8PSK = 56;
+		QAM = 6;
+		QAM16 = 60;
+		QAM32 = 61;
+		QAM64 = 62;
+		QAM128 = 63;
+		QAM256 = 64;
+		CW = 7;
+		Noise = 8;
+		RECOGNIZING = 9;
 }
 ```
 
@@ -419,7 +465,7 @@ message ITUParams{
 | 消息         | 字段             | 范围                 |
 | :----------- | :--------------- | :------------------- |
 | IFScanParams | center_freq      | [20MHz，6GHz]        |
-| IFScanParams | bandwidth        | [0Hz，40MHz]         |
+| IFScanParams | band_width       | [0Hz，40MHz]         |
 | IFScanParams | rbw              | [1Hz，1MHz]          |
 | IFScanParams | interval         | 典型值可设置为1000ms |
 | IFScanParams | spectrum_points  | [101，16001]         |
@@ -985,14 +1031,14 @@ service PulseAnaService {
 }
 ```
 
-1. `rpc StartPulseAna(PulseAnaRequest) returns (TaskAccount) {}`
+1. `StartPulseAna(PulseAnaRequest) returns (TaskAccount) {}`
 
    `Start()`启动一个脉冲分析任务，以`PulseAnaRequest`类型的消息作为请求，系统返回`TaskAccount`消息作为本任务账号。`PulseAnaRequest`的第一个消息为执行任务的节点设备，第二个消息为`PulseAnaParams`类型的任务参数。
 
 ```protobuf
 //脉冲分析请求
 message PulseAnaRequest {
-  repeated NodeDevice taskRunner = 1; //任务执行单元
+  repeated NodeDevice task_runner = 1;//任务执行单元
   PulseAnaParams pulseAnaParams = 2;  //分析参数
 }
 ```
@@ -1000,25 +1046,23 @@ message PulseAnaRequest {
 ```protobuf
 //脉冲分析参数
 message PulseAnaParams {			
-	double		centerFrequency=1; //中心频率
-	double		sampleRate=2;      //采样率
-	double		attenuation=3;     //衰减增益
-	int32	    antenna=4;         //天线选择
-	int32		preamp=5;          //增益   
-    double      thresholdLevel=6;  //门限
-    int32       pointParam=7;      //判断点数
+	double		center_freq=1;   //中心频率,单位Hz[20MHz,6GHz]
+	double		sample_rate=2;   //采样率,单位Hz[56M, 28M, 14M, 7M, 3.5M, 1.75M, 0.875M...]
+	double		attenuation_gain=3; //衰减增益[-30,20]
+	int32	    antenna=4;          //天线选择[0,1] 
+    double    threshold_level=5;    //门限电平dBm 
+    int32     point_judge=6;        //判断点数,无需设置
 }
 ```
 
 `PulseAnaParams`消息描述的脉冲分析的任务参数。
 
-- `centerFrequency` 待分析的频段中心频率
-- `sampleRate`采样率
-- `attenuation`衰减增益设置，同全景扫描
+- `center_freq` 待分析的频段中心频率
+- `sample_rate`采样率
+- `attenuation_gain`衰减增益设置，同全景扫描
 - antenna天线选择，同全景扫描
-- preamp增益
-- thresholdLevel脉冲分析门限
-- pointParam判断点数
+- threshold_level脉冲分析门限
+- point_judge判断点数
 
 2. `rpc GetResult(TaskId) returns (stream PulseAnaResult) {}`
 
@@ -1027,8 +1071,8 @@ message PulseAnaParams {
 ```protobuf
 //脉冲分析结果
 message PulseAnaResult {
-  NodeDevice resultFrom = 1;
-  repeated PulseResult pulseList = 2;
+  NodeDevice result_from = 1;
+  repeated PulseResult pulse_list = 2;
 }
 ```
 
@@ -1038,13 +1082,12 @@ message PulseAnaResult {
 //脉冲参数
 message PulseResult
 {
-  uint32   pulseIndex=1;    //脉冲标号          
-  double   pulseWidth=2;    //脉冲宽度    
-  double   pulseAmpl=3;     //脉冲幅度      
-  uint32   timeSeconds=4;   //脉冲到达时间(秒)      
-  uint32   timeNSeconds=5;  //脉冲到达时间(微秒) 
-  uint32   repeatedPeriod=6;//脉冲周期      
-  double   dutyRatio=7;     //占空比        
+  uint32   pulse_index=1;    //脉冲标号[0,255]         
+  double   pulse_width=2;    //脉冲宽度,单位ns 
+  double   pulse_amp=3;      //脉冲幅度,单位dBm  
+  double   pulse_period=4;   //脉冲周期,单位ns      
+  double   duty_ratio=5;     //占空比 
+  Timestamp timestamp=6;     //脉冲到达时间
 }
 ```
 
@@ -1056,7 +1099,7 @@ message PulseResult
    //脉冲分析门限改变的请求
    message ChangeThresholdRequest {
      TaskAccount task_account = 1;   //任务账号
-     double  pulseThreshold=2;       //门限
+     double  threshold_Level=2;      //门限
    }
    ```
 
@@ -1068,15 +1111,14 @@ message PulseResult
 
 脉冲分析任务参数`PulseAnaParams`消息中各字段范围如下表：
 
-| 消息           | 字段           | 范围          |
-| :------------- | :------------- | :------------ |
-| PulseAnaParams | center_freq    | [20MHz，6GHz] |
-| PulseAnaParams | sampleRate     | [0Hz，40MHz]  |
-| PulseAnaParams | attenuation    | [-30，20]     |
-| PulseAnaParams | antenna        | 可选0或1      |
-| PulseAnaParams | preamp         | [101，16001]  |
-| PulseAnaParams | thresholdLevel |               |
-| PulseAnaParams | pointParam     |               |
+| 消息           | 字段             | 范围          |
+| :------------- | :--------------- | :------------ |
+| PulseAnaParams | center_freq      | [20MHz，6GHz] |
+| PulseAnaParams | sample_rate      | [0Hz，40MHz]  |
+| PulseAnaParams | attenuation_gain | [-30，20]     |
+| PulseAnaParams | antenna          | 可选0或1      |
+| PulseAnaParams | threshold_level  |               |
+| PulseAnaParams | point_judge      |               |
 
 
 
