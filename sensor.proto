@@ -80,8 +80,8 @@ enum TaskType {
   PULSE_ANALYSIS = 10;  //脉冲分析
 };
 
-//任务摘要
-message TaskSummary {
+//节点任务摘要
+message NodeTaskSummary {
   TaskId id = 1;        //任务id
   TaskType type = 2;    //任务类型
   DeviceId device = 3;  //所用设备
@@ -102,7 +102,7 @@ message NodeInfo {
   Timestamp last_heard_time = 3;  //最近一次通信的时刻
   Position position = 4;          //节点位置
   repeated DeviceId devices = 5;  //隶属于节点的设备列表
-  repeated TaskSummary tasks = 6; //节点正在运行的任务列表
+  repeated NodeTaskSummary tasks = 6; //节点正在运行的任务列表
   repeated DeviceInfo  deviceInfoList= 7;   //隶属于节点设备信息列表
 }
 

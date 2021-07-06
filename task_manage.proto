@@ -7,3 +7,35 @@ option java_package = "com.zb.sensor.taskManage";
 option java_outer_classname = "TaskManProto";
 
 import "sensor.proto";  //依赖sensor.proto的消息定义
+import "google/protobuf/empty.proto";
+
+message ServerTaskElapsedTime
+{
+    int32 time_from_created = 4;//自任务创建起流逝的时间（秒）
+    int32 time_from_last_product = 6;//自最近一次节点上传数据起流逝的时间（秒），-1代表尚无数据上传
+    int32 time_from_last_consume = 7;//自最近一次客户端访问起流逝的时间（秒），-1代表尚无客户端访问
+}
+
+
+//任务摘要
+message ServerTaskSummary 
+{
+    TaskId id = 1;        //任务id
+    TaskType type = 2;    //任务类型
+    repeated NodeDevice task_runner = 3; //有效执行该任务的节点
+    int32 buffer_size = 4;              //缓冲待取的数据包个数
+    ServerTaskElapsedTime time_measument = 5; //任务的时间度量
+}
+
+message TasksInfo
+{
+    repeated ServerTaskSummary tasks = 1;
+}
+
+//节点管理的API
+service TaskManageService {
+    rpc ListAll(google.protobuf.Empty) returns (TasksInfo) {}  //枚举所有服务中的任务
+    rpc GetTaskSumary(TaskId) returns (ServerTaskSummary) {}        //根据任务id获得任务摘要
+    rpc AbortOne(TaskId) returns (google.protobuf.Empty){}         //终止任务
+    rpc AbortAll(google.protobuf.Empty) returns(google.protobuf.Empty){}
+  }

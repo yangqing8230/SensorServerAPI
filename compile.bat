@@ -2,7 +2,7 @@ set PROTO_INCLUDE_DIR=D:\vcpkg\installed\x64-windows\include\
 set COMPILE_TOOL_SET=.\tools\vs2019\x64\
 set CPP_GENERATED=.\generated_cpp
 set PYTHON_GENERATED=.\generated_python
-set PROTO_FILES_TO_COMPILE=.\sensor.proto .\scan.proto .\pscan.proto .\discrete_scan.proto .\IF_scan.proto .\analog_demod.proto .\iq_acquire.proto .\drone_detect.proto .\tdoa.proto .\zerospan.proto .\multi_scan.proto .\pulseAnalysis.proto
+set PROTO_FILES_TO_COMPILE=.\sensor.proto .\scan.proto .\pscan.proto .\discrete_scan.proto .\IF_scan.proto .\analog_demod.proto .\iq_acquire.proto .\drone_detect.proto .\tdoa.proto .\zerospan.proto .\multi_scan.proto .\pulseAnalysis.proto .\task_manage.proto
 
 @rem cpp
 set GPRC_CPP_PLUGIN="D:\vcpkg\installed\x64-windows\tools\grpc\grpc_cpp_plugin.exe"
