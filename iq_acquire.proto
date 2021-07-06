@@ -18,8 +18,8 @@ message TimeTriggerParams{
     }
     TimeTriggerType trigger_type = 1;   //触发类型
     Timestamp       trigger_time = 2;   //触发时刻
-    uint32		    sweep_interval = 3;     //扫描间隔,单位ms
-    uint32		    segment_interval = 4;   //频点间隔,单位ms
+    uint32		    sweep_interval = 3;     //扫描间隔,单位ms 大于500ms
+    uint32		    segment_interval = 4;   //频点间隔,单位ms 大于100ms
 }
 
 //幅度触发参数

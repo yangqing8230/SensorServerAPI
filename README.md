@@ -1013,6 +1013,7 @@ IQ数据采集任务参数`IQSweepParams`消息中各字段范围如下表：
 | IQSweepParams.IQSegmentParams   | sample_rate          | [56MHz，28MHz，14MHz，7MHz，3.5MHz， 1.75MHz， 0.875MHz...] |
 | IQSweepParams.IQSegmentParams   | attenuation_gain     | [-30，20]                                                   |
 | IQSweepParams.IQSegmentParams   | antenna              | 可选0或1                                                    |
+| IQSweepParams.TimeTriggerParams | sweep_interval       | 大于500ms                                                   |
 | IQSweepParams.TimeTriggerParams | segment_interval     | 大于100ms                                                   |
 
 ### pulseAnalysis.proto
