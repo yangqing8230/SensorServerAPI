@@ -8,20 +8,12 @@ option java_outer_classname = "ZeroSpan";
 
 import "sensor.proto";
 
-//结果选项
-message ResultOption{
-    bool enable_data_realtime = 1;  //使能实时数据
-    bool enable_data_maxhold = 2;  //使能数据最大保持
-    bool enable_data_minhold = 3;  //使能数据最小保持
-}
-
 //零扫宽扫描参数
 message TaskParams{
 	double          center_freq = 1;            //中心频率,单位Hz
     double          scan_time_in_msec = 2;      //扫描时间,单位毫秒
     int32           attenuation_gain = 3;       //衰减增益[-30, 20]
     int32           antenna = 4;                //天线选择[0,1]
-    ResultOption    result_option = 5;          //结果选项,启用的功能可选
 }
 
 //启动零扫宽扫描请求
@@ -32,26 +24,18 @@ message StartTaskRequest{
 
 //零扫宽扫描结果数据头
 message Header{
-    uint64		sequence_number = 1;    //顺序号
     double		center_frequency = 2;   //中心频率,单位Hz
     double		sample_rate = 3;        //采样率,单位Hz
-    double      time_span = 4;          //实际扫描时间，单位毫秒
-    Timestamp   start_time = 5;         //绝对起始时刻
-    Position    position = 6;           //采集时所处的位置
-}
-
-//零扫宽扫描结果数据体
-message Body {
-    repeated float realtime_trace = 1;  //实时线
-    repeated float maxhold_trace = 2;  //最大保持线
-    repeated float minhold_trace = 3;  //最小保持线
+    double      show_points = 4;        //显示总点数
+    double      scan_time_in_msec = 5;  //扫描时长
+    int32       first_point_idx = 6;    //本次结果的起始点索引
 }
 
 //IQ结果
 message Result{
     NodeDevice result_from = 1;     //结果来源
     Header header = 2;              //结果头
-    Body body = 3;                  //幅度曲线
+    repeated float samples_level = 3;  //最大保持线
 }
 
 service ZeroSpanScanService
