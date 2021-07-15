@@ -7,6 +7,7 @@ option java_package = "com.zb.sensor.tdoa";
 option java_outer_classname = "TDOAProto";
 
 import "sensor.proto";  //依赖sensor.proto的消息定义
+import "google/protobuf/empty.proto";
 
 //目标的信号特征(待定位的目标)
 message TargetSignal {
@@ -123,10 +124,26 @@ message TDOAProgress{
   repeated SensorAcquireProgress progress = 1;
 }
 
+//tdoa记录
+message TDOARecord{
+  uint32 tid = 1;            //定位任务id
+  int32 num_target = 2;      //要定位的目标个数
+  int32 num_participant = 3; //参与定位的节点数量
+  uint32 start_time = 4;     //定位发起的UTC秒值
+}
+
+message TDOARecordList{
+  repeated TDOARecord record_list = 1;
+}
+
 //tdoa API
 service TDOAService {
   rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
   rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  //获取任务数据
   rpc GetTaskProgress(TaskId) returns (TDOAProgress) {}         //获取任务各节点的数据传输进度
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
+
+  rpc ListAllRecord(google.protobuf.Empty) returns(TDOARecordList){}  //获取TDOA的任务记录
+  rpc StartReplay(TaskId) returns(TaskAccount){}      //启动回放
+  rpc StopReplay(TaskId) returns (google.protobuf.Empty) {}    //停止回放
 }

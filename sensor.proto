@@ -95,6 +95,13 @@ message DeviceInfo {
   double temperature = 3;  //温度
 }
 
+//任务数据管线的状态
+message PipelineStatus{
+  uint32 send_fail_times = 1;  //发送失败次数
+  uint32 blocked_times = 2;      //处于阻塞状态的次数
+  uint32 sended_message_count = 3; //发送的消息总数
+}
+
 //感知节点信息
 message NodeInfo {
   NodeId id = 1;          //节点id
@@ -103,7 +110,8 @@ message NodeInfo {
   Position position = 4;          //节点位置
   repeated DeviceId devices = 5;  //隶属于节点的设备列表
   repeated NodeTaskSummary tasks = 6; //节点正在运行的任务列表
-  repeated DeviceInfo  deviceInfoList= 7;   //隶属于节点设备信息列表
+  repeated DeviceInfo device_info_list= 7;   //隶属于节点设备信息列表
+  PipelineStatus pipeline_status = 8;     //任务数据管线的状态
 }
 
 //命令摘要
@@ -141,6 +149,7 @@ message NodesInfo{
 message TaskAccount{
   TaskId task_id = 1;   //任务id
   repeated NodeDevice node_devices = 2; //有效执行该任务的节点
+  NodeReply reply_details = 3;  //节点响应细节
 }
 
 //命令错误码
