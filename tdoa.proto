@@ -144,6 +144,6 @@ service TDOAService {
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
 
   rpc ListAllRecord(google.protobuf.Empty) returns(TDOARecordList){}  //获取TDOA的任务记录
-  rpc StartReplay(TaskId) returns(TaskAccount){}      //启动回放
+  rpc StartReplay(TaskId) returns(google.protobuf.Empty){}      //启动回放
   rpc StopReplay(TaskId) returns (google.protobuf.Empty) {}    //停止回放
 }
