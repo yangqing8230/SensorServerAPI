@@ -95,6 +95,13 @@ message DeviceInfo {
   double temperature = 3;  //温度
 }
 
+//任务数据管线的状态
+message PipelineStatus{
+  uint32 send_fail_times = 1;  //发送失败次数
+  uint32 blocked_times = 2;      //处于阻塞状态的次数
+  uint32 sended_message_count = 3; //发送的消息总数
+}
+
 //感知节点信息
 message NodeInfo {
   NodeId id = 1;          //节点id
@@ -103,7 +110,8 @@ message NodeInfo {
   Position position = 4;          //节点位置
   repeated DeviceId devices = 5;  //隶属于节点的设备列表
   repeated NodeTaskSummary tasks = 6; //节点正在运行的任务列表
-  repeated DeviceInfo  deviceInfoList= 7;   //隶属于节点设备信息列表
+  repeated DeviceInfo device_info_list= 7;   //隶属于节点设备信息列表
+  PipelineStatus pipeline_status = 8;     //任务数据管线的状态
 }
 
 //命令摘要
@@ -141,42 +149,43 @@ message NodesInfo{
 message TaskAccount{
   TaskId task_id = 1;   //任务id
   repeated NodeDevice node_devices = 2; //有效执行该任务的节点
+  NodeReply reply_details = 3;  //节点响应细节
 }
 
 //命令错误码
 enum ErrorType {
-  ERR_NONE = 0;
-  ERR_NOTIMPLEMENTED = -1;
-  ERR_UNKNOWN = -2;
-  ERR_BUSY = -3;
-  ERR_ABORTED = -5;
-  ERR_CMD_NOREPLY = -6;
-  ERR_PARAM = -8;
-  ERR_STATION_NAME_EXISTS = -11;
-  ERR_INVALID_HANDLE = -15;
-  ERR_INVALID_REQUEST = -16;
-  ERR_NO_SENSORS = -20;
-  ERR_SOCKET_ERROR = -26;
-  ERR_NODE_NOT_FOUND = -27;
-  ERR_NO_DATA_AVAILABLE = -28;
-  ERR_BUFFER_TOO_SMALL = -30;
-  ERR_DIAGNOSTIC = -31;
-  ERR_COMMAND_FAILED = -38;
-  ERR_TIMEOUT = -40;
-  ERR_STRING_TOO_LONG = -43;
-  ERR_DATA_TYPE = -52;
-  ERR_AUTHORIZATION = -57;
-  ERR_LICENSE = -64;
-  ERR_MEAS_FAILED = -66;
-  ERR_DATA_AVAIL_TIMEOUT = -75;
-  ERR_TASK_NOT_FOUND = -76;
-  ERR_NODE_TASK_ASSIGN = -77;
-  ERR_SENSOR_TASK_ASSIGN = -78;
-  ERR_SENSOR_TASK_START = -79;
-  ERR_OPEN_FILE = -80;
-  ERR_COMPASS_NOT_AVAILABLE = -81;
-	ERR_TDOA = -82;
-  ERR_TASK_QUIT = -83;
+  ERR_NONE = 0;               //无错误
+  ERR_NOTIMPLEMENTED = -1;    //功能未实现
+  ERR_UNKNOWN = -2;           //未知错误
+  ERR_BUSY = -3;              //节点忙
+  ERR_ABORTED = -5;           //操作终止
+  ERR_CMD_NOREPLY = -6;       //响应超时
+  ERR_PARAM = -8;             //参数错误
+  ERR_STATION_NAME_EXISTS = -11;  //节点名称已存在
+  ERR_INVALID_HANDLE = -15;       //无效的句柄
+  ERR_INVALID_REQUEST = -16;      //无效的请求
+  ERR_NO_SENSORS = -20;           //节点无设备
+  ERR_SOCKET_ERROR = -26;         //socket错误
+  ERR_NODE_NOT_FOUND = -27;       //节点未找到
+  ERR_NO_DATA_AVAILABLE = -28;    //没有有效数据
+  ERR_BUFFER_TOO_SMALL = -30;     //缓冲区不足
+  ERR_DIAGNOSTIC = -31;           //诊断错误
+  ERR_COMMAND_FAILED = -38;       //命令执行失败
+  ERR_TIMEOUT = -40;              //超时
+  ERR_STRING_TOO_LONG = -43;      //字符串过长
+  ERR_DATA_TYPE = -52;            //数据类型
+  ERR_AUTHORIZATION = -57;        //鉴权失败
+  ERR_LICENSE = -64;              //授权失效
+  ERR_MEAS_FAILED = -66;          //测量失败
+  ERR_DATA_AVAIL_TIMEOUT = -75;   //数据超时
+  ERR_TASK_NOT_FOUND = -76;       //任务未找到
+  ERR_NODE_TASK_ASSIGN = -77;     //节点任务指派失败
+  ERR_SENSOR_TASK_ASSIGN = -78;   //设备任务指派失败
+  ERR_SENSOR_TASK_START = -79;    //设备任务启动失败
+  ERR_OPEN_FILE = -80;            //打开文件错误
+  ERR_COMPASS_NOT_AVAILABLE = -81;//罗盘不可用
+	ERR_TDOA = -82;                 //TDOA错误
+  ERR_TASK_QUIT = -83;            //任务已退出
 }
 
 message RenameRequest
