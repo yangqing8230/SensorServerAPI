@@ -34,11 +34,10 @@ message DetectResult{
   repeated SignalDescriptor detect_signals = 2; //检出的信号列表
 }
 
-//门限判别结果
-message OverThresholdSector{
-  double start_freq = 1;
-  double stop_freq = 2;
-  float peak = 3;
+//门限设置/门限判别结果
+message ThresholdSector{      
+  FrequencySpan freq_span = 1;  //门限判别的起始终止频率
+  float level = 2;              //门限电平
 }
 
 //数据保持结果
@@ -52,9 +51,5 @@ message ResultBody {
   repeated float realtime_trace = 2;  //实时频谱线
   DataHoldResult data_hold_result = 3;  //数据保持结果
   DetectResult detect_result = 4;       //信号检测结果
-  repeated OverThresholdSector over_threshold_sectors = 5; //门限判别结果
+  repeated ThresholdSector over_threshold_sectors = 5; //门限判别结果
 }
-
-
-
-
