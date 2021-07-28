@@ -15,8 +15,8 @@ enum Demodulation {
   AM   = 1;	 
   FM   = 2; 
   CW   = 3; //连续波
-  ISB  = 4; //独立边带
-  USB = 5;  //上边带
+  USB = 4;  //上边带
+  ISB  = 5; //独立边带
 }
 
 //解调信道
