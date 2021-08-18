@@ -55,6 +55,9 @@ message Position {
   double longitude = 2;         //经度，单位 弧度
   double elevation = 3;         //海拔，单位 米
   uint32 time_sync_alarms = 4;  //GPS模块状态信息
+  uint32 noisePerMS=5;          //GPS测量的噪声水平
+  uint32 agcCnt=6;              //AGC控制
+  uint32 jamInd=7;              //CW因子
 }
 
 //任务状态
