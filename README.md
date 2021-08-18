@@ -126,12 +126,13 @@ message DetectResult{
 }
 ```
 
-5. `ThresholdResult`消息定义了门限判别的结果，结果中为通过门限比对产生的超过门限的频段列表。
+5. `ThresholdSector`消息定义了门限判别的结果，结果中为通过门限比对产生的超过门限的频段列表及峰值电平。
 
 ```protobuf
-//门限判别结果
-message ThresholdResult{
-  repeated FrequencySpan over_threshold_signals = 1; //超出门限的信号列表
+//门限设置/门限判别结果
+message ThresholdSector{      
+  FrequencySpan freq_span = 1;  //门限判别的起始终止频率
+  float level = 2;              //门限电平
 }
 ```
 
@@ -155,7 +156,7 @@ message ResultBody {
   repeated float realtime_trace = 2;  //实时频谱线
   DataHoldResult data_hold_result = 3;  //数据保持结果
   DetectResult detect_result = 4;       //信号检测结果
-  ThresholdResult threshold_result = 5; //门限判别结果
+  repeated ThresholdSector over_threshold_sectors = 5; //门限判别结果
 }
 ```
 
