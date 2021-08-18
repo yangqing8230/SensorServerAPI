@@ -18,6 +18,7 @@ message TargetSignal {
   int32 antenna = 5;      //天线选择[0,1]
 }
 
+//选项
 message TDOAOption{
   bool enable_spectrum = 1;   //频谱输出
   bool enable_iq = 2;         //iq输出
@@ -43,6 +44,19 @@ message StartTDOARequest{
   TDOAParams task_parms = 2;          //任务参数
 }
 
+message TDOAStatistic
+{
+  int32 confidence = 1;   //置信度[1-99]，设为0将不使能统计
+  int32 sample_space_size = 2; //样本空间大小[10-1000]
+  int32 zone_outline_points = 3;  //轮廓线的点数
+}
+
+//定位结果统计
+message StatisticRequest{
+  TaskId task_id = 1;
+  TDOAStatistic statistic_parms = 2;
+}
+
 //水平的方位信息
 message GeogCoord {
   double ln = 1;  //经度,单位 度
@@ -51,10 +65,11 @@ message GeogCoord {
 
 //tdoa错误码
 enum TDOAError {
-	TDOA_ERR_NONE = 0;          //无错误
-  TDOA_ERR_LACK_QUALIFIED_BLOCK = 1;  //缺少合格的数据块
-	TDOA_ERR_CORRELATE = 2;     //互相关错误
-	TDOA_ERR_POSITION = 3;      //定位错误
+	TDOA_ERR_NONE = 0;                      //无错误
+  TDOA_ERR_LACK_QUALIFIED_BLOCK = 1;      //缺少合格的数据块
+	TDOA_ERR_NO_QULIFIED_CORRELATE = 2;     //无合格的互相关结果
+  TDOA_ERR_POSITION = 3;                  //定位算法无法求解
+  TDOA_ERR_QUESTIONABLE_POSITION = 4;          //位置可疑（在置信椭圆之外）
 }
 
 //数据块摘要
@@ -72,6 +87,7 @@ message Correlation{
   int64 time_offset = 2;      //时间戳偏移, 单位 纳秒
   double sensor_distance = 3; //两个传感器之间的距离，单位 米
   double signal_arrival_difference = 4; //信号到达的距离差,单位 米（互相关解算的结果）
+  bool qualified = 5; //是否合格
 }
 
 //一个定位批次互相关信息
@@ -81,7 +97,7 @@ message BatchCorrelation{
 }
 
 //目标的定位信息
-message TargetPosition{
+message RawTargetPosition{
   enum ResolveMethod{
     DIRECTION = 0;          //双站测向
     FAST_POSITION = 1;      //快速定位
@@ -89,6 +105,11 @@ message TargetPosition{
   }
   ResolveMethod mtd = 1;                  //解算方式
   repeated GeogCoord target_position = 2; //目标位置,解的可能个数[0,2]
+}
+
+message ConfidenceZone{
+  int32 confidence = 1;                  //置信度
+  repeated GeogCoord zone_outline = 2;  //置信椭圆的轮廓线
 }
 
 //tdoa过程数据(各种迹线)
@@ -110,7 +131,8 @@ message TDOAProduction{
   repeated BlockBrief block_brief = 3;      //数据块摘要
   repeated TDOATrace details = 4;           //过程迹线（频谱、IQ、互相关）
   BatchCorrelation correlation_info = 5;    //互相关结果
-  TargetPosition position_info = 6;         //定位结果
+  RawTargetPosition raw_position = 6;       //本次定位结果（原始数据)
+  ConfidenceZone  located_zone = 7;         //统计得到的坐落区域
 }
 
 //tdoa 数据传输状态
@@ -130,6 +152,7 @@ message TDOARecord{
   int32 num_target = 2;      //要定位的目标个数
   int32 num_participant = 3; //参与定位的节点数量
   uint32 start_time = 4;     //定位发起的UTC秒值
+  TDOAParams task_param = 5;  //任务参数
 }
 
 message TDOARecordList{
@@ -139,11 +162,12 @@ message TDOARecordList{
 //tdoa API
 service TDOAService {
   rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
+  rpc SetStatistic(StatisticRequest) returns(google.protobuf.Empty){} //设置统计参数
   rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  //获取任务数据
   rpc GetTaskProgress(TaskId) returns (TDOAProgress) {}         //获取任务各节点的数据传输进度
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
 
   rpc ListAllRecord(google.protobuf.Empty) returns(TDOARecordList){}  //获取TDOA的任务记录
-  rpc StartReplay(TaskId) returns(google.protobuf.Empty){}      //启动回放
+  rpc StartReplay(TaskId) returns(TaskAccount){}      //启动回放
   rpc StopReplay(TaskId) returns (google.protobuf.Empty) {}    //停止回放
 }
