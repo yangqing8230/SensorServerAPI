@@ -40,6 +40,23 @@ message Timestamp {
   int32 nanos = 2;    //本秒内的纳秒偏移
 }
 
+message GNSSSatInfo
+{
+  uint32 gnss_id = 1;         // GNSS 系统标识
+  uint32 sat_id = 2;          // 卫星标识
+  uint32 cnr = 3;             //载噪比 Carrier to noise ratio (signal strength)
+  int32 elevation = 4;        // 俯仰角 Elevation (range: +/-90)
+  uint32 azimuth = 5;         //方位角 Azimuth (range 0-360)
+  uint32 pseud_residual = 6;  //伪距余数 Pseudorange residual
+}
+
+message GNSSInfo{
+  uint32 noise_per_ms = 1;          //GPS测量的噪声水平
+  uint32 agc_cnt = 2;              //AGC控制
+  uint32 jam_ind = 3;              //CW因子
+  repeated GNSSSatInfo sat_info = 4;
+}
+
 //方位信息 WGS84坐标体系
 message Position {
   //bit indicator
@@ -54,10 +71,8 @@ message Position {
   double latitude  = 1;	        //纬度，单位 弧度
   double longitude = 2;         //经度，单位 弧度
   double elevation = 3;         //海拔，单位 米
-  uint32 time_sync_alarms = 4;  //GPS模块状态信息
-  uint32 noisePerMS=5;          //GPS测量的噪声水平
-  uint32 agcCnt=6;              //AGC控制
-  uint32 jamInd=7;              //CW因子
+  uint32 time_sync_alarms = 4;  //GNSS模块状态信息
+  GNSSInfo GNSS_info = 5;
 }
 
 //任务状态

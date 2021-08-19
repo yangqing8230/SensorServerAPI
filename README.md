@@ -58,7 +58,9 @@ message NodeInfo {
   Timestamp last_heard_time = 3;  //最近一次通信的时刻
   Position position = 4;          //节点位置
   repeated DeviceId devices = 5;  //隶属于节点的设备列表
-  repeated TaskSummary tasks = 6; //节点正在运行的任务列表
+  repeated NodeTaskSummary tasks = 6; //节点正在运行的任务列表
+  repeated DeviceInfo device_info_list= 7;   //隶属于节点设备信息列表
+  PipelineStatus pipeline_status = 8;     //任务数据管线的状态
 }
 ```
 
@@ -729,15 +731,20 @@ message ChangeChannelRequest {
 
 ### TDOA.proto
 
-该文件定义了系统TDOA定位功能的消息和接口，包含四个接口
+该文件定义了系统TDOA定位功能的消息和接口，包含八个接口
 
 ```protobuf
 //tdoa API
 service TDOAService {
   rpc Start(StartTDOARequest) returns (TaskAccount) {}  //启动任务
+  rpc SetStatistic(StatisticRequest) returns(google.protobuf.Empty){} //设置统计参数
   rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  //获取任务数据
   rpc GetTaskProgress(TaskId) returns (TDOAProgress) {}         //获取任务各节点的数据传输进度
   rpc Stop(TaskId) returns (NodeReply) {}               //停止任务
+
+  rpc ListAllRecord(google.protobuf.Empty) returns(TDOARecordList){}  //获取TDOA的任务记录
+  rpc StartReplay(TaskId) returns(TaskAccount){}      //启动回放
+  rpc StopReplay(TaskId) returns (google.protobuf.Empty) {}    //停止回放
 }
 ```
 
@@ -787,7 +794,32 @@ message TDOAOption{
 }
 ```
 
-2. `rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  `
+2. `rpc SetStatistic(StatisticRequest) returns(google.protobuf.Empty){}`
+
+   `SetStatistic()`用于对定位结果的统计，可在实时任务或回放任务启动后，调用该接口激活统计功能。`StatisticRequest`消息定义为
+   
+   ```protobuf
+   //定位结果统计
+   message StatisticRequest{
+     TaskId task_id = 1;
+     TDOAStatistic statistic_parms = 2;
+   }
+   ```
+   
+   其中的`statistic_parms`是一个`TDOAStatistic`消息，定义为
+   
+   ```protobuf
+   message TDOAStatistic
+   {
+     int32 confidence = 1;   //置信度[1-99]，设为0将不使能统计
+     int32 sample_space_size = 2; //样本空间大小[10-1000]
+     int32 zone_outline_points = 3;  //轮廓线的点数
+   }
+   ```
+   
+   用户可以通过`confidence`设置置信度，置信度的大小影响到置信椭圆的区域范围，置信度越大则椭圆包裹的样本点越多，椭圆的覆盖区域通常也越大；反之，置信椭圆包含的样本点少，椭圆变小。`sample_space_size`是统计的样本空间大小，即使用多少个历史位置点来做统计；`zone_outline_points`用来设定结果中椭圆轮廓线的点数。
+   
+3. `rpc GetProduction(TaskId) returns (stream TDOAProduction) {}  `
 
    `GetProduction()`用于获取TDOA定位的结果，该接口的返回值是一个`TDOAProduction`消息流，注意应有**独立的工作线程**来进行结果的接收。结果中包含一次定位的过程数据和结果数据。
 
@@ -799,7 +831,8 @@ message TDOAProduction{
   repeated BlockBrief block_brief = 3;      //数据块摘要
   repeated TDOATrace details = 4;           //过程迹线（频谱、IQ、互相关）
   BatchCorrelation correlation_info = 5;    //互相关结果
-  TargetPosition position_info = 6;         //定位结果
+  RawTargetPosition raw_position = 6;       //本次定位结果（原始数据)
+  ConfidenceZone  located_zone = 7;         //统计得到的坐落区域
 }
 ```
 
@@ -810,7 +843,8 @@ message TDOAProduction{
 - `block_brief`包含本次定位的所有数据块摘要，主要包括采集设备id、采集位置、采集时刻、是否包含数据等信息。
 - `details`是一组定位过程中产生的曲线数据，其中的每一个数据项是一个`TDOATrace`消息，根据任务选项的设定，可能是频谱曲线、IQ曲线、互相关曲线。
 - `correlation_info`是定位过程中产生的互相关数据。
-- `position_info`包含定位结果，其中的`target_position`给出目标的方位信息。系统会根据实际的互相关计算结果，自行确定定位方法，根据定位方法的不同，该子消息中的`target_position`中解的个数和含义也不同，具体使用请参照示例程序。
+- `raw_position`包含本次定位的结果，其中的`target_position`给出目标的方位信息。系统会根据实际的互相关计算结果，自行确定定位方法，根据定位方法的不同，该子消息中的`target_position`中解的个数和含义也不同，具体使用请参照示例程序。
+- `located_zone`给出的是统计若干历史位置点后的置信区域信息，调用`SetStatistic()`接口将激活统计功能。
 
 ```protobuf
 //tdoa过程数据(各种迹线)
@@ -846,6 +880,18 @@ message TDOAProgress{
 4. `rpc Stop(TaskId) returns (NodeReply) {} `
 
    以任务id为请求，结束TDOA任务。
+   
+5. `rpc ListAllRecord(google.protobuf.Empty) returns(TDOARecordList){}`
+
+   获取数据库中的所有TDOA任务记录。
+
+6. `rpc StartReplay(TaskId) returns(TaskAccount){} `
+
+   启动一个回放任务，之后的操作与启动实时TDOA任务类似。
+
+7. `rpc StopReplay(TaskId) returns (google.protobuf.Empty) {}`
+
+   停止一个回放任务
 
 **TDOA定位任务参数范围说明**
 
